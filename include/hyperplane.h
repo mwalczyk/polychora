@@ -26,8 +26,7 @@ namespace four
 		{
 		}
 
-		/// Returns `true` if `point` is "inside" the hyperplane (within some epsilon) and
-		/// `false` otherwise.
+		/// Returns `true` if `point` is "inside" the hyperplane (within some epsilon) and `false` otherwise.
 		bool inside(const glm::vec4& point, float epsilon = 0.001f) const
 		{
 			return abs(signed_distance(point)) <= epsilon;

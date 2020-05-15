@@ -1,6 +1,7 @@
 #pragma once
 
 #include "hyperplane.h"
+#include "permutations.h"
 
 namespace four
 {
@@ -78,6 +79,61 @@ namespace four
         /// A polytope with 600 tetrahedral cells
         Cell600,
     };
+
+
+    std::vector<combinatorics::PermutationSeed<float>> get_permutation_seeds(Polychoron polychoron)
+    {
+        // The Golden Ration (and powers of)
+        const float phi = (1.0f + sqrtf(5.0f)) / 2.0f;
+        const float phi_1 = phi;
+        const float phi_2 = powf(phi, 2.0f);
+        const float phi_3 = powf(phi, 3.0f);
+        const float phi_4 = powf(phi, 4.0f);
+        const float phi_5 = powf(phi, 5.0f);
+        const float phi_6 = powf(phi, 6.0f);
+
+        switch (polychoron)
+        {
+        case Polychoron::Cell8:
+            return {
+                // All
+                four::combinatorics::PermutationSeed<float>{ { 1.0f, 1.0f, 1.0f, 1.0f }, true, four::combinatorics::Parity::ALL },
+            };
+        case Polychoron::Cell16:
+            return {
+                // All
+                four::combinatorics::PermutationSeed<float>{ { 1.0f, 0.0f, 0.0f, 0.0f }, true, four::combinatorics::Parity::ALL },
+            };
+        case Polychoron::Cell24:
+            return {
+                // All
+                four::combinatorics::PermutationSeed<float>{ { 1.0f, 1.0f, 1.0f, 1.0f }, true, four::combinatorics::Parity::ALL },
+                four::combinatorics::PermutationSeed<float>{ { 2.0f, 0.0f, 0.0f, 0.0f }, true, four::combinatorics::Parity::ALL }
+            };
+        case Polychoron::Cell120:
+            return {
+                // All
+                four::combinatorics::PermutationSeed<float>{ { 2.0f, 2.0f, 0.0f, 0.0f }, true, four::combinatorics::Parity::ALL },
+                four::combinatorics::PermutationSeed<float>{ { sqrtf(5.0f), 1.0f, 1.0f, 1.0f }, true, four::combinatorics::Parity::ALL },
+                four::combinatorics::PermutationSeed<float>{ { phi, phi, phi, powf(phi, -2.0f) }, true, four::combinatorics::Parity::ALL },
+                four::combinatorics::PermutationSeed<float>{ { powf(phi, 2.0f), powf(phi, -1.0f), powf(phi, -1.0f), powf(phi, -1.0f) }, true, four::combinatorics::Parity::ALL },
+            
+                // Even
+                four::combinatorics::PermutationSeed<float>{ { powf(phi, 2.0f),  powf(phi, -2.0f), 1.0f, 0.0f }, true, four::combinatorics::Parity::EVEN },
+                four::combinatorics::PermutationSeed<float>{ { sqrtf(5.0f),  powf(phi, -1.0f), phi, 0.0f }, true, four::combinatorics::Parity::EVEN },
+                four::combinatorics::PermutationSeed<float>{ { 2.0f, 1.0f, phi, powf(phi, -1.0f) }, true, four::combinatorics::Parity::EVEN }
+            };
+        case Polychoron::Cell600:
+            return {
+                // All
+                four::combinatorics::PermutationSeed<float>{ { 1.0f, 1.0f, 1.0f, 1.0f }, true, four::combinatorics::Parity::ALL },
+                four::combinatorics::PermutationSeed<float>{ { 2.0f, 0.0f, 0.0f, 0.0f }, true, four::combinatorics::Parity::ALL },
+
+                // Even
+                four::combinatorics::PermutationSeed<float>{ { phi, 1.0f, powf(phi, -1.0f), 0.0f }, true, four::combinatorics::Parity::EVEN },
+            };
+        }
+    }
 
     /// Returns the dual of the regular polychoron, which is itself another regular
     /// polychoron with a vertex at the center of each cell of the original polychoron.

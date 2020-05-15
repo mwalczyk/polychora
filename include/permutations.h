@@ -89,7 +89,6 @@ namespace four
 			}
 
 			return subsets;
-
 		}
 
 		/// Reference: `https://www.geeksforgeeks.org/all-permutations-of-an-array-using-stl-in-c/`
@@ -176,11 +175,6 @@ namespace four
 						}
 					}
 				}
-			}
-
-			for (const auto& permutation : output_permutations)
-			{
-				//display(permutation);
 			}
 
 			return output_permutations;

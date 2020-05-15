@@ -28,15 +28,14 @@ bool first_mouse = true;
 float last_x;
 float last_y;
 float zoom = 45.0f;
-glm::mat4 arcball_camera_matrix = glm::lookAt(glm::vec3{ 0.0f, 0.5f, 100.5f }, glm::vec3{ 0.0f }, glm::vec3{ 0.0f, 1.0f, 0.0f });
+glm::mat4 arcball_camera_matrix = glm::lookAt(glm::vec3{ 0.0f, 0.5f, 15.0f }, glm::vec3{ 0.0f }, glm::vec3{ 0.0f, 1.0f, 0.0f });
 glm::mat4 arcball_model_matrix = glm::mat4{ 1.0f };
 
 // Global settings
 // ...
 
 // 4-dimensional rendering settings
-std::vector<std::string> polychora = { "8-Cell", "16-Cell", "24-Cell", "120-Cell", "600-Cell" };
-std::string current_polychora = polychora[3];
+size_t polychoron_index = 0;
 float rotation_xy = 0.0f;
 float rotation_yz = 0.0f;
 float rotation_zx = 0.0f;
@@ -218,15 +217,6 @@ glm::mat4 build_simple_rotation_matrix()
            four::maths::get_simple_rotation_matrix(four::maths::Plane::ZW, rotation_zw);
 }
 
-four::Polychoron get_current_polychoron()
-{
-    if (current_polychora == "8-Cell") return four::Polychoron::Cell8;
-    else if (current_polychora == "16-Cell") return four::Polychoron::Cell16;
-    else if (current_polychora == "24-Cell") return four::Polychoron::Cell24;
-    else if (current_polychora == "120-Cell") return four::Polychoron::Cell120;
-    else if (current_polychora == "600-Cell") return four::Polychoron::Cell600;
-}
-
 /**
  * Initialize GLFW and the OpenGL context.
  */
@@ -286,50 +276,18 @@ void initialize()
     }
 }
 
-#include "permutations.h"
-
 #include "libqhullcpp/RboxPoints.h"
 #include "libqhullcpp/Qhull.h"
 #include "libqhullcpp/QhullFacetList.h"
 #include "libqhullcpp/QhullVertexSet.h"
 
-double round(double x) { return floor(x * 10 + 0.5) / 10; }
+double round_nearest_tenth(double x) 
+{ 
+    return floor(x * 10.0 + 0.5) / 10.0; 
+}
 
-four::Tetrahedra run_qhull()
+std::vector<four::Tetrahedra> run_qhull()
 {
-    const float phi = (1.0f + sqrtf(5.0f)) / 2.0f;
-    const float phi_1 = phi;
-    const float phi_2 = powf(phi, 2.0f);
-    const float phi_3 = powf(phi, 3.0f);
-    const float phi_4 = powf(phi, 4.0f);
-    const float phi_5 = powf(phi, 5.0f);
-    const float phi_6 = powf(phi, 6.0f);
-    // 120-cell
-    //std::vector<four::combinatorics::PermutationSeed<float>> seeds =
-    //{
-    //    // All
-    //    four::combinatorics::PermutationSeed<float>{ { 2.0f, 2.0f, 0.0f, 0.0f }, true, four::combinatorics::Parity::ALL },
-    //    four::combinatorics::PermutationSeed<float>{ { sqrtf(5.0f), 1.0f, 1.0f, 1.0f }, true, four::combinatorics::Parity::ALL },
-    //    four::combinatorics::PermutationSeed<float>{ { phi, phi, phi, powf(phi, -2.0f) }, true, four::combinatorics::Parity::ALL },
-    //    four::combinatorics::PermutationSeed<float>{ { powf(phi, 2.0f), powf(phi, -1.0f), powf(phi, -1.0f), powf(phi, -1.0f) }, true, four::combinatorics::Parity::ALL },
-    //
-    //    // Even
-    //    four::combinatorics::PermutationSeed<float>{ { powf(phi, 2.0f),  powf(phi, -2.0f), 1.0f, 0.0f }, true, four::combinatorics::Parity::EVEN },
-    //    four::combinatorics::PermutationSeed<float>{ { sqrtf(5.0f),  powf(phi, -1.0f), phi, 0.0f }, true, four::combinatorics::Parity::EVEN },
-    //    four::combinatorics::PermutationSeed<float>{ { 2.0f, 1.0f, phi, powf(phi, -1.0f) }, true, four::combinatorics::Parity::EVEN }
-    //};
-
-    // 600-cell
-    //std::vector<four::combinatorics::PermutationSeed<float>> seeds =
-    //{
-    //    // All
-    //    four::combinatorics::PermutationSeed<float>{ { 1.0f, 1.0f, 1.0f, 1.0f }, true, four::combinatorics::Parity::ALL },
-    //    four::combinatorics::PermutationSeed<float>{ { 2.0f, 0.0f, 0.0f, 0.0f }, true, four::combinatorics::Parity::ALL },
-
-    //    // Even
-    //    four::combinatorics::PermutationSeed<float>{ { phi, 1.0f, powf(phi, -1.0f), 0.0f }, true, four::combinatorics::Parity::EVEN },
-    //};
-
     // Bitruncated tesseract
     //std::vector<four::combinatorics::PermutationSeed<float>> seeds =
     //{
@@ -429,113 +387,129 @@ four::Tetrahedra run_qhull()
     //};
 
     // Cantellated 120-cell
-    std::vector<four::combinatorics::PermutationSeed<float>> seeds =
-    {
-        // All
-        four::combinatorics::PermutationSeed<float>{ {0, 0, 2 * phi_3, 4 * phi_2}, true, four::combinatorics::Parity::ALL },
-        four::combinatorics::PermutationSeed<float>{ {1, 1, phi_3, 3 * phi_3}, true, four::combinatorics::Parity::ALL },
-        four::combinatorics::PermutationSeed<float>{ {1, 1, 3 + 4 * phi_1, 3 + 4 * phi_1}, true, four::combinatorics::Parity::ALL },
-        four::combinatorics::PermutationSeed<float>{ {2 * phi_1, 2 * phi_2, 2 * phi_3, 2 * phi_3}, true, four::combinatorics::Parity::ALL },
-        four::combinatorics::PermutationSeed<float>{ {phi_3, phi_3, 1 + 4 * phi_1, 3 + 4 * phi_1}, true, four::combinatorics::Parity::ALL },
+    //std::vector<four::combinatorics::PermutationSeed<float>> seeds =
+    //{
+    //    // All
+    //    four::combinatorics::PermutationSeed<float>{ {0, 0, 2 * phi_3, 4 * phi_2}, true, four::combinatorics::Parity::ALL },
+    //    four::combinatorics::PermutationSeed<float>{ {1, 1, phi_3, 3 * phi_3}, true, four::combinatorics::Parity::ALL },
+    //    four::combinatorics::PermutationSeed<float>{ {1, 1, 3 + 4 * phi_1, 3 + 4 * phi_1}, true, four::combinatorics::Parity::ALL },
+    //    four::combinatorics::PermutationSeed<float>{ {2 * phi_1, 2 * phi_2, 2 * phi_3, 2 * phi_3}, true, four::combinatorics::Parity::ALL },
+    //    four::combinatorics::PermutationSeed<float>{ {phi_3, phi_3, 1 + 4 * phi_1, 3 + 4 * phi_1}, true, four::combinatorics::Parity::ALL },
 
-        // Even
-        four::combinatorics::PermutationSeed<float>{ {phi_1, 2 * phi_2, 3 + 4 * phi_1, 3 * phi_2}, true, four::combinatorics::Parity::EVEN },
-        four::combinatorics::PermutationSeed<float>{ {phi_2, 2 * phi_1, 4 + 5 * phi_1, phi_3}, true, four::combinatorics::Parity::EVEN },
-        four::combinatorics::PermutationSeed<float>{ {phi_2, 2 + phi_1, 3 + 4 * phi_1, 2 * phi_3}, true, four::combinatorics::Parity::EVEN },
-        four::combinatorics::PermutationSeed<float>{ {phi_2, phi_3, 4 * phi_2, phi_4}, true, four::combinatorics::Parity::EVEN },
-        four::combinatorics::PermutationSeed<float>{ {phi_2, phi_4, 1 + 4 * phi_1, 2 * phi_3}, true, four::combinatorics::Parity::EVEN },
-        four::combinatorics::PermutationSeed<float>{ {2 * phi_1, 1 + 3 * phi_1, 3 + 4 * phi_1, phi_4}, true, four::combinatorics::Parity::EVEN },
-        four::combinatorics::PermutationSeed<float>{ {2 + phi_1, phi_3, phi_5, 2 * phi_2}, true, four::combinatorics::Parity::EVEN },
-        four::combinatorics::PermutationSeed<float>{ {phi_3, 2 * phi_2, 1 + 3 * phi_1, 2 + 5 * phi_1}, true, four::combinatorics::Parity::EVEN },
-        four::combinatorics::PermutationSeed<float>{ {0, 1, 4 + 5 * phi_1, 1 + 3 * phi_1}, true, four::combinatorics::Parity::EVEN },
-        four::combinatorics::PermutationSeed<float>{ {0, phi_1, phi_5, 1 + 4 * phi_1}, true, four::combinatorics::Parity::EVEN },
-        four::combinatorics::PermutationSeed<float>{ {0, phi_2, 3 * phi_3, 2 + phi_1}, true, four::combinatorics::Parity::EVEN },
-        four::combinatorics::PermutationSeed<float>{ {0, phi_3, 2 + 5 * phi_1, 3 * phi_2}, true, four::combinatorics::Parity::EVEN },
-        four::combinatorics::PermutationSeed<float>{ {1, phi_2, 2 + 5 * phi_1, 2 * phi_3}, true, four::combinatorics::Parity::EVEN },
-        four::combinatorics::PermutationSeed<float>{ {1, phi_2, 4 + 5 * phi_1, 2 * phi_2}, true, four::combinatorics::Parity::EVEN },
-        four::combinatorics::PermutationSeed<float>{ {1, 2 * phi_1, phi_5, phi_4}, true, four::combinatorics::Parity::EVEN },
-        four::combinatorics::PermutationSeed<float>{ {1, phi_4, 2 * phi_3, 3 * phi_2}, true, four::combinatorics::Parity::EVEN },
-        four::combinatorics::PermutationSeed<float>{ {phi_1, phi_2, 2 * phi_1, 3 * phi_3}, true, four::combinatorics::Parity::EVEN },
+    //    // Even
+    //    four::combinatorics::PermutationSeed<float>{ {phi_1, 2 * phi_2, 3 + 4 * phi_1, 3 * phi_2}, true, four::combinatorics::Parity::EVEN },
+    //    four::combinatorics::PermutationSeed<float>{ {phi_2, 2 * phi_1, 4 + 5 * phi_1, phi_3}, true, four::combinatorics::Parity::EVEN },
+    //    four::combinatorics::PermutationSeed<float>{ {phi_2, 2 + phi_1, 3 + 4 * phi_1, 2 * phi_3}, true, four::combinatorics::Parity::EVEN },
+    //    four::combinatorics::PermutationSeed<float>{ {phi_2, phi_3, 4 * phi_2, phi_4}, true, four::combinatorics::Parity::EVEN },
+    //    four::combinatorics::PermutationSeed<float>{ {phi_2, phi_4, 1 + 4 * phi_1, 2 * phi_3}, true, four::combinatorics::Parity::EVEN },
+    //    four::combinatorics::PermutationSeed<float>{ {2 * phi_1, 1 + 3 * phi_1, 3 + 4 * phi_1, phi_4}, true, four::combinatorics::Parity::EVEN },
+    //    four::combinatorics::PermutationSeed<float>{ {2 + phi_1, phi_3, phi_5, 2 * phi_2}, true, four::combinatorics::Parity::EVEN },
+    //    four::combinatorics::PermutationSeed<float>{ {phi_3, 2 * phi_2, 1 + 3 * phi_1, 2 + 5 * phi_1}, true, four::combinatorics::Parity::EVEN },
+    //    four::combinatorics::PermutationSeed<float>{ {0, 1, 4 + 5 * phi_1, 1 + 3 * phi_1}, true, four::combinatorics::Parity::EVEN },
+    //    four::combinatorics::PermutationSeed<float>{ {0, phi_1, phi_5, 1 + 4 * phi_1}, true, four::combinatorics::Parity::EVEN },
+    //    four::combinatorics::PermutationSeed<float>{ {0, phi_2, 3 * phi_3, 2 + phi_1}, true, four::combinatorics::Parity::EVEN },
+    //    four::combinatorics::PermutationSeed<float>{ {0, phi_3, 2 + 5 * phi_1, 3 * phi_2}, true, four::combinatorics::Parity::EVEN },
+    //    four::combinatorics::PermutationSeed<float>{ {1, phi_2, 2 + 5 * phi_1, 2 * phi_3}, true, four::combinatorics::Parity::EVEN },
+    //    four::combinatorics::PermutationSeed<float>{ {1, phi_2, 4 + 5 * phi_1, 2 * phi_2}, true, four::combinatorics::Parity::EVEN },
+    //    four::combinatorics::PermutationSeed<float>{ {1, 2 * phi_1, phi_5, phi_4}, true, four::combinatorics::Parity::EVEN },
+    //    four::combinatorics::PermutationSeed<float>{ {1, phi_4, 2 * phi_3, 3 * phi_2}, true, four::combinatorics::Parity::EVEN },
+    //    four::combinatorics::PermutationSeed<float>{ {phi_1, phi_2, 2 * phi_1, 3 * phi_3}, true, four::combinatorics::Parity::EVEN },
+    //};
+
+    std::vector<std::vector<four::combinatorics::PermutationSeed<float>>> all_permutation_seeds =
+    {
+        four::get_permutation_seeds(four::Polychoron::Cell8),
+        four::get_permutation_seeds(four::Polychoron::Cell16),
+        four::get_permutation_seeds(four::Polychoron::Cell24),
+        four::get_permutation_seeds(four::Polychoron::Cell120),
+        four::get_permutation_seeds(four::Polychoron::Cell600)
     };
 
-    auto permutations = four::combinatorics::generate<float>(seeds);
-    std::cout << permutations.size() << " permutations found" << std::endl;
+    std::vector<four::Tetrahedra> tetrahedra_groups;
 
-    std::vector<double> coordinates;
-    for (const auto& permutation : permutations)
+    for (const auto& seeds : all_permutation_seeds)
     {
-        if (permutation.size() != 4)
+        auto permutations = four::combinatorics::generate<float>(seeds);
+        std::cout << permutations.size() << " permutations found" << std::endl;
+
+        std::vector<double> coordinates;
+        for (const auto& permutation : permutations)
         {
-            throw std::runtime_error("Permutation does not have the correct number of dimensions");
-        }
-        coordinates.push_back(permutation[0]);
-        coordinates.push_back(permutation[1]);
-        coordinates.push_back(permutation[2]);
-        coordinates.push_back(permutation[3]);
-    }
-    
-    // Initialize QHull
-    orgQhull::Qhull qhull;
-
-    std::vector<glm::vec4> vertices;
-    std::vector<size_t> simplices;
-    std::vector<glm::vec4> normals;
-
-    try {
-        // Run QHull
-        std::cout << "Running convex hull algorithm on " << permutations.size() << " vertices" << std::endl;
-        qhull.runQhull("", 4, permutations.size(), coordinates.data(), "Qt");
-
-        // Process unique points that form the convex hull
-        for (const auto& point : qhull.points())
-        {
-            auto coords = point.coordinates();
-            assert(point.dimension() == 4);
-
-            vertices.push_back({ coords[0], coords[1], coords[2], coords[3] });
-        }
-
-        // Process unique facets that form the convex hull
-        std::cout << "Facet count: " << qhull.facetList().count() << std::endl;
-        for (const auto& face : qhull.facetList())
-        {
-            if (!face.isSimplicial())
+            if (permutation.size() != 4)
             {
-                throw std::runtime_error("Non-simplical face found");
+                throw std::runtime_error("Permutation does not have the correct number of dimensions");
             }
-            for (const auto& vertex : face.vertices())
+            coordinates.push_back(permutation[0]);
+            coordinates.push_back(permutation[1]);
+            coordinates.push_back(permutation[2]);
+            coordinates.push_back(permutation[3]);
+        }
+
+        // Initialize QHull
+        orgQhull::Qhull qhull;
+
+        std::vector<glm::vec4> vertices;
+        std::vector<size_t> simplices;
+        std::vector<glm::vec4> normals;
+
+        try {
+            // Run QHull
+            std::cout << "Running convex hull algorithm on " << permutations.size() << " vertices" << std::endl;
+            qhull.runQhull("", 4, permutations.size(), coordinates.data(), "Qt");
+
+            // Process unique points that form the convex hull
+            for (const auto& point : qhull.points())
             {
-                simplices.push_back(vertex.point().id());
+                auto coords = point.coordinates();
+                assert(point.dimension() == 4);
+
+                vertices.push_back({ coords[0], coords[1], coords[2], coords[3] });
             }
 
-            auto hyperplane = face.hyperplane();
-            auto normal = hyperplane.coordinates();
-            assert(hyperplane.dimension() == 4);
+            // Process unique facets that form the convex hull
+            std::cout << "Facet count: " << qhull.facetList().count() << std::endl;
+            for (const auto& face : qhull.facetList())
+            {
+                if (!face.isSimplicial())
+                {
+                    throw std::runtime_error("Non-simplical face found");
+                }
+                for (const auto& vertex : face.vertices())
+                {
+                    simplices.push_back(vertex.point().id());
+                }
 
-            normals.push_back(glm::normalize(glm::vec4{ 
-                round(normal[0]),
-                round(normal[1]),
-                round(normal[2]),
-                round(normal[3])
-            }));
-            
+                auto hyperplane = face.hyperplane();
+                auto normal = hyperplane.coordinates();
+                assert(hyperplane.dimension() == 4);
+
+                normals.push_back(glm::normalize(glm::vec4{
+                    round_nearest_tenth(normal[0]),
+                    round_nearest_tenth(normal[1]),
+                    round_nearest_tenth(normal[2]),
+                    round_nearest_tenth(normal[3])
+                    }));
+
+            }
+
+            std::cout << "Convex hull resulted in:" << std::endl;
+            std::cout << vertices.size() << " vertices" << std::endl;
+            std::cout << simplices.size() / 4 << " simplices" << std::endl;
+            std::cout << normals.size() << " hyperplane normals" << std::endl;
+        }
+        catch (std::exception e)
+        {
+            std::cout << e.what() << std::endl;
         }
 
-        std::cout << "Convex hull resulted in:" << std::endl;
-        std::cout << vertices.size() << " vertices" << std::endl;
-        std::cout << simplices.size() / 4 << " simplices" << std::endl;
-        std::cout << normals.size() << " hyperplane normals" << std::endl;
-    }
-    catch (std::exception e)
-    {
-        std::cout << e.what() << std::endl;
+        tetrahedra_groups.push_back({
+            vertices,
+            simplices,
+            normals
+        });
     }
     
-    return {
-        vertices,
-        simplices,
-        normals
-    };
+    return tetrahedra_groups;
 }
 
 int main()
@@ -550,12 +524,14 @@ int main()
     const glm::vec4 origin = { 0.0f, 0.0f, 0.0f, 0.0f };
     const float pi = 3.14159265358979f;
 
-    auto result = run_qhull();
+    auto tetrahedra_groups = run_qhull();
 
     // Construct the 4D mesh, slicing hyperplane, 4D camera, etc.
     auto renderer = four::Renderer{};
-    renderer.add_tetrahedra(result);
-    //auto mesh = four::Mesh{ result };// get_current_polychoron()
+    for (const auto& tetrahedra : tetrahedra_groups)
+    {
+        renderer.add_tetrahedra(tetrahedra);
+    }
 
     auto hyperplane = four::Hyperplane{ w_axis, 0.1f };
     auto camera = four::Camera{
@@ -569,7 +545,6 @@ int main()
     auto shader_projections = graphics::Shader{ "../shaders/projections.vert", "../shaders/projections.frag" };
 
     glm::mat4 simple_rotation_matrix = build_simple_rotation_matrix();
-    //mesh.slice(hyperplane, simple_rotation_matrix);
     renderer.slice_objects(hyperplane);
 
     // Uniforms for 4D -> 3D projection.
@@ -583,7 +558,6 @@ int main()
     // Uniforms for 3D -> 2D projection.
     shader_projections.uniform_mat4("u_three_view", arcball_camera_matrix);
     
-
     while (!glfwWindowShouldClose(window))
     {
         // Update flag that denotes whether or not the user is interacting with ImGui
@@ -604,30 +578,9 @@ int main()
             ImGui::ColorEdit3("clear color", (float*)&clear_color);
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
-            if (ImGui::BeginCombo("Polychora", current_polychora.c_str()))
-            {
-                for (size_t i = 0; i < polychora.size(); ++i)
-                {
-                    bool is_selected = current_polychora.c_str() == polychora[i];
+            ImGui::SliderInt("Polychoron", (int*)&polychoron_index, 0, renderer.get_number_of_objects() - 1);
 
-                    if (ImGui::Selectable(polychora[i].c_str(), is_selected))
-                    {
-                        // If the polychora selection has changed, load a new mesh
-                        current_polychora = polychora[i];
-                        glFinish();
-                       // mesh = four::Mesh{ get_current_polychoron() };
-
-                        topology_needs_update = true;
-                    }
-                    if (is_selected)
-                    {
-                        ImGui::SetItemDefaultFocus();
-                    }
-                }
-                ImGui::EndCombo();
-            }
-
-            if (ImGui::SliderFloat("Hyperplane Displacement", &hyperplane.displacement, -30.0f, 30.0f)) topology_needs_update = true;
+            if (ImGui::SliderFloat("Hyperplane Displacement", &hyperplane.displacement, -3.0f, 3.0f)) topology_needs_update = true;
             if (roundf(hyperplane.get_displacement()) == hyperplane.get_displacement())
             {
                 hyperplane.displacement += 0.001f;
@@ -659,8 +612,8 @@ int main()
         {
             if (topology_needs_update)
             {
-               // mesh.slice(hyperplane, simple_rotation_matrix);
-                renderer.slice_objects(hyperplane);
+                renderer.set_transform(polychoron_index, simple_rotation_matrix);
+                renderer.slice_object(polychoron_index, hyperplane);
             }
 
             if (display_wireframe)
@@ -676,9 +629,7 @@ int main()
             shader_projections.use();
             shader_projections.uniform_mat4("u_three_model", arcball_model_matrix);
             shader_projections.uniform_mat4("u_three_projection", projection);
-           // mesh.draw_slice();
-
-            renderer.draw_sliced_objects();
+            renderer.draw_sliced_object(polychoron_index);
         }
 
         // Draw the ImGui window

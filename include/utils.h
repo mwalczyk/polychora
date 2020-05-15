@@ -11,8 +11,6 @@ namespace four
 	{
 
         /// Returns the index of the largest component of the vector.
-        //
-        // TODO: use templates
 		size_t index_of_largest(const glm::vec4& v)
 		{
             float largest_val = abs(v.x);
@@ -37,6 +35,7 @@ namespace four
             return largest_index;
 		}
 
+        /// Truncates the vec4 to a vec3, discarding the element at `index`.
         glm::vec3 truncate_n(const glm::vec4& v, size_t index)
         {
             switch (index)
@@ -54,11 +53,13 @@ namespace four
             return fmax(fmin(value, max_v), min_v);
         }
 
+        /// Calculates the average of all of the elements of `values`.
         template<class T>
         T average(const std::vector<T>& values, const T& initial)
         {
             return std::accumulate(values.begin(), values.end(), initial) / static_cast<float>(values.size());
         }
+
 	}
 
 }
