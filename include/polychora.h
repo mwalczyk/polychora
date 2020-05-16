@@ -149,6 +149,35 @@ namespace four
                 four::combinatorics::PermutationSeed<float>{ { 1.0f, 1.0f + sqrtf(2.0f), 1.0f + sqrtf(2.0f), 1.0f + 2.0f * sqrtf(2.0f) }, true, four::combinatorics::Parity::ALL },
             },
 
+            // Bitruncated 120-cell
+            {
+                // All
+                four::combinatorics::PermutationSeed<float>{ {0, 0, 4 * phi_1, 2 * phi_4}, true, four::combinatorics::Parity::ALL },
+                four::combinatorics::PermutationSeed<float>{ {2 + phi_1, 2 + phi_1, 2 + 5 * phi_1, 2 + 5 * phi_1}, true, four::combinatorics::Parity::ALL },
+
+                // Even
+                four::combinatorics::PermutationSeed<float>{ {0, 1, 4 + 5 * phi_1, 1 + 5 * phi_1}, true, four::combinatorics::Parity::EVEN },
+                four::combinatorics::PermutationSeed<float>{ {0, 1, 3 * phi_1, 3 + 7 * phi_1}, true, four::combinatorics::Parity::EVEN },
+                four::combinatorics::PermutationSeed<float>{ {0, phi_1, 5 * phi_2, 1 + 4 * phi_1}, true, four::combinatorics::Parity::EVEN },
+                four::combinatorics::PermutationSeed<float>{ {0, 3 * phi_2, 3 + 4 * phi_1, 4 + 3 * phi_1}, true, four::combinatorics::Parity::EVEN },
+                four::combinatorics::PermutationSeed<float>{ {1, 2 * phi_1, 3 + 7 * phi_1, 2 + phi_1}, true, four::combinatorics::Parity::EVEN },
+                four::combinatorics::PermutationSeed<float>{ {1, 2 * phi_1, 5 * phi_2, phi_4}, true, four::combinatorics::Parity::EVEN },
+                four::combinatorics::PermutationSeed<float>{ {1, 2, phi_5, 2 + 5 * phi_1}, true, four::combinatorics::Parity::EVEN },
+                four::combinatorics::PermutationSeed<float>{ {1, 2 * phi_2, phi_5, 4 + 3 * phi_1}, true, four::combinatorics::Parity::EVEN },
+                four::combinatorics::PermutationSeed<float>{ {phi_1, 2, phi_3, 3 + 7 * phi_1}, true, four::combinatorics::Parity::EVEN },
+                four::combinatorics::PermutationSeed<float>{ {phi_1, phi_4, 2 + 5 * phi_1, 4 + 3 * phi_1}, true, four::combinatorics::Parity::EVEN },
+                four::combinatorics::PermutationSeed<float>{ {2 * phi_1, 1 + 4 * phi_1, 2 + 5 * phi_1, 3 * phi_2}, true, four::combinatorics::Parity::EVEN },
+                four::combinatorics::PermutationSeed<float>{ {2 * phi_1, phi_4, 1 + 5 * phi_1, 3 + 4 * phi_1}, true, four::combinatorics::Parity::EVEN },
+                four::combinatorics::PermutationSeed<float>{ {2, 2 * phi_1, 2 * phi_4, 2 * phi_2}, true, four::combinatorics::Parity::EVEN },
+                four::combinatorics::PermutationSeed<float>{ {2, phi_3, 4 + 5 * phi_1, 3 * phi_2}, true, four::combinatorics::Parity::EVEN },
+                four::combinatorics::PermutationSeed<float>{ {2, 2 + phi_1, phi_5, 3 + 4 * phi_1}, true, four::combinatorics::Parity::EVEN },
+                four::combinatorics::PermutationSeed<float>{ {phi_3, 4 * phi_1, phi_5, phi_4}, true, four::combinatorics::Parity::EVEN },
+                four::combinatorics::PermutationSeed<float>{ {phi_3, 2 * phi_2, 1 + 5 * phi_1, 2 + 5 * phi_1}, true, four::combinatorics::Parity::EVEN },
+                four::combinatorics::PermutationSeed<float>{ {3 * phi_1, 2 * phi_2, 1 + 4 * phi_1, phi_5}, true, four::combinatorics::Parity::EVEN },
+                four::combinatorics::PermutationSeed<float>{ {2 + phi_1, phi_3, 5 * phi_2, 2 * phi_2}, true, four::combinatorics::Parity::EVEN },
+                four::combinatorics::PermutationSeed<float>{ {2 + phi_1, 3 * phi_1, 4 + 5 * phi_1, phi_4}, true, four::combinatorics::Parity::EVEN }
+            },
+
             // Omnitruncated 120-cell
             {
                 // All

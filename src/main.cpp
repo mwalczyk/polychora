@@ -8,6 +8,10 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "libqhullcpp/RboxPoints.h"
+#include "libqhullcpp/Qhull.h"
+#include "libqhullcpp/QhullFacetList.h"
+#include "libqhullcpp/QhullVertexSet.h"
 
 #include "camera.h"
 #include "maths.h"
@@ -19,7 +23,7 @@
 struct InputData
 {
     bool imgui_active = false;
-};
+} input_data;
 
 // Viewport and camera settings
 const uint32_t window_w = 1200;
@@ -28,11 +32,8 @@ bool first_mouse = true;
 float last_x;
 float last_y;
 float zoom = 45.0f;
-glm::mat4 arcball_camera_matrix = glm::lookAt(glm::vec3{ 0.0f, 0.5f, 8.0f }, glm::vec3{ 0.0f }, glm::vec3{ 0.0f, 1.0f, 0.0f });
+glm::mat4 arcball_camera_matrix = glm::lookAt(glm::vec3{ 0.0f, 0.5f, 6.0f }, glm::vec3{ 0.0f }, glm::vec3{ 0.0f, 1.0f, 0.0f });
 glm::mat4 arcball_model_matrix = glm::mat4{ 1.0f };
-
-// Global settings
-// ...
 
 // 4-dimensional rendering settings
 size_t polychoron_index = 0;
@@ -46,8 +47,6 @@ bool display_wireframe = false;
 
 // Appearance settings
 ImVec4 clear_color = ImVec4(0.091f, 0.062f, 0.127f, 1.0f);
-
-InputData input_data;
 
 GLFWwindow* window;
 
@@ -276,20 +275,37 @@ void initialize()
     }
 }
 
-#include "libqhullcpp/RboxPoints.h"
-#include "libqhullcpp/Qhull.h"
-#include "libqhullcpp/QhullFacetList.h"
-#include "libqhullcpp/QhullVertexSet.h"
-
 double round_nearest_tenth(double x) 
 { 
-    return floor(x * 10.0 + 0.5) / 10.0; 
+    return floor(x * 10.0 + 0.5) / 10.0;
 }
 
 std::vector<four::Tetrahedra> run_qhull()
 {
-    std::vector<std::vector<four::combinatorics::PermutationSeed<float>>> all_permutation_seeds = four::get_all_permutation_seeds();
-    
+    std::vector<std::vector<four::combinatorics::PermutationSeed<float>>> all_permutation_seeds; //= four::get_all_permutation_seeds();
+    const float phi = (1.0f + sqrtf(5.0f)) / 2.0f;
+    const float phi_1 = phi;
+    const float phi_2 = powf(phi, 2.0f);
+    const float phi_3 = powf(phi, 3.0f);
+    const float phi_4 = powf(phi, 4.0f);
+    const float phi_5 = powf(phi, 5.0f);
+    const float phi_6 = powf(phi, 6.0f);
+
+
+    auto cell8 =
+    {
+        // All
+        four::combinatorics::PermutationSeed<float>{ { 1.0f, 1.0f, 1.0f, 1.0f }, true, four::combinatorics::Parity::ALL },
+        four::combinatorics::PermutationSeed<float>{ { 2.0f, 0.0f, 0.0f, 0.0f }, true, four::combinatorics::Parity::ALL },
+
+        // Even
+        four::combinatorics::PermutationSeed<float>{ { phi, 1.0f, powf(phi, -1.0f), 0.0f }, true, four::combinatorics::Parity::EVEN },
+    };
+
+    for (size_t i = 0; i < 9; i++)
+    {
+        all_permutation_seeds.push_back(cell8);
+    }
     std::vector<four::Tetrahedra> tetrahedra_groups;
 
     for (const auto& seeds : all_permutation_seeds)
@@ -333,7 +349,7 @@ std::vector<four::Tetrahedra> run_qhull()
 
             // Process unique facets that form the convex hull
             std::cout << "Facet count: " << qhull.facetList().count() << std::endl;
-            for (const auto& face : qhull.facetList())
+            for (auto& face : qhull.facetList())
             {
                 if (!face.isSimplicial())
                 {
@@ -345,6 +361,7 @@ std::vector<four::Tetrahedra> run_qhull()
                 }
 
                 auto hyperplane = face.hyperplane();
+                auto center = face.getCenter();
                 auto normal = hyperplane.coordinates();
                 assert(hyperplane.dimension() == 4);
 
@@ -354,7 +371,6 @@ std::vector<four::Tetrahedra> run_qhull()
                     round_nearest_tenth(normal[2]),
                     round_nearest_tenth(normal[3])
                 }));
-
             }
 
             std::cout << "Convex hull resulted in:" << std::endl;
@@ -400,7 +416,7 @@ int main()
 
     auto hyperplane = four::Hyperplane{ w_axis, 0.1f };
     auto camera = four::Camera{
-        x_axis * 4.0f, // From
+        x_axis * 2.0f, // From
         origin, // To
         y_axis, // Up
         z_axis  // Over
@@ -443,8 +459,9 @@ int main()
             ImGui::ColorEdit3("clear color", (float*)&clear_color);
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
+            ImGui::Separator();
+            ImGui::Text("Slicing and Rotations");
             ImGui::SliderInt("Polychoron", (int*)&polychoron_index, 0, renderer.get_number_of_objects() - 1);
-
             if (ImGui::SliderFloat("Hyperplane Displacement", &hyperplane.displacement, -3.0f, 3.0f)) topology_needs_update = true;
             if (roundf(hyperplane.get_displacement()) == hyperplane.get_displacement())
             {
@@ -475,11 +492,22 @@ int main()
 
         // Draw the 4D objects
         {
-            if (topology_needs_update)
+            //if (topology_needs_update)
+            for (size_t i = 0; i < renderer.get_number_of_objects(); i++)
             {
-                renderer.set_transform(polychoron_index, simple_rotation_matrix);
-                renderer.slice_object(polychoron_index, hyperplane);
+                glm::vec4 translation = {
+                    (i / static_cast<float>(renderer.get_number_of_objects() - 1.0f)) * 9 - 4.5f,
+                    0,
+                    0.0,
+                     sinf(glfwGetTime() * 0.75f + i / ((float)renderer.get_number_of_objects() + 1.0f)) * 0.5f + 0.5f
+                };
+                translation.w *= 0.5f;
+
+                auto rotation = four::maths::get_simple_rotation_matrix(four::maths::Plane::XW, cosf(glfwGetTime() * 0.75f + i / ((float)renderer.get_number_of_objects() + 1.0f)));
+                renderer.set_transform(i, rotation * glm::mat4{ 0.5f }, translation);
+                renderer.slice_object(i, hyperplane);
             }
+
 
             if (display_wireframe)
             {
@@ -489,12 +517,14 @@ int main()
             {
                 glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
             }
+
             glm::mat4 projection = glm::perspective(glm::radians(zoom), static_cast<float>(window_w) / static_cast<float>(window_h), 0.1f, 1000.0f);
 
             shader_projections.use();
             shader_projections.uniform_mat4("u_three_model", arcball_model_matrix);
             shader_projections.uniform_mat4("u_three_projection", projection);
-            renderer.draw_sliced_object(polychoron_index);
+           // renderer.draw_sliced_object(polychoron_index);
+            renderer.draw_sliced_objects();
         }
 
         // Draw the ImGui window

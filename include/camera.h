@@ -29,7 +29,7 @@ namespace four
 			auto wc = maths::cross(wd, wa, wb);
 
 			// Set columns of look-at matrix
-			glm::mat4 matrix;
+			glm::mat4 matrix = glm::mat4{ 1.0f };
 			matrix[0] = wa;
 			matrix[1] = wb;
 			matrix[2] = wc;

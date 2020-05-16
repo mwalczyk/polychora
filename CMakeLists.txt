@@ -52,4 +52,7 @@ set_target_properties(polychora PROPERTIES CXX_STANDARD 17)
 
 if(MSVC)
 	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT polychora)
+
+	# this is necessary to build QHull for some reason
+	add_link_options("/FORCE")
 endif()

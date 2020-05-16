@@ -135,6 +135,8 @@ namespace four
             compute.uniform_vec4("u_hyperplane_normal", hyperplane.get_normal());
             compute.uniform_float("u_hyperplane_displacement", hyperplane.get_displacement());
             compute.uniform_mat4("u_transform", batches[index].transform);
+            compute.uniform_vec4("u_translation", batches[index].translation);
+            compute.uniform_int("u_object_index", index);
 
             // Bind buffers for read / write
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, batches[index].buffer_tetrahedra);
@@ -156,16 +158,17 @@ namespace four
             }
         }
 
-        void set_transform(size_t index, const glm::mat4& transform)
+        void set_transform(size_t index, const glm::mat4& transform, const glm::vec4& translation = glm::vec4{ 0.0f })
         {
             batches[index].transform = transform;
+            batches[index].translation = translation;
         }
 
-        void set_transforms(const glm::mat4& transform)
+        void set_transforms(const glm::mat4& transform, const glm::vec4& translation = glm::vec4{ 0.0f })
         {
             for (size_t index = 0; index < batches.size(); index++)
             {
-                set_transform(index, transform);
+                set_transform(index, transform, translation);
             }
         }
 
@@ -216,8 +219,13 @@ namespace four
             /// A GPU-side buffer that will be filled with indirect drawing commands via the `compute` program
             uint32_t buffer_indirect_commands;
 
+            /// This batch's transformation matrix (in 4-space)
             glm::mat4 transform = glm::mat4{ 1.0f };
 
+            /// This batch's translation (in 4-space): note that glm doesn't support 5x5 matrices, so we have to do this
+            glm::vec4 translation = glm::vec4{ 0.0f };
+
+            /// The total number of tetrahedra that are in this batch
             size_t number_of_tetrahedra = 0;
         };
 

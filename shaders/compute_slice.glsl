@@ -6,7 +6,10 @@ uniform vec4 u_hyperplane_normal;
 uniform float u_hyperplane_displacement;
 
 uniform mat4 u_transform;
+uniform vec4 u_translation;
 uniform float u_time;
+
+uniform int u_object_index;
 
 struct Tetrahedron
 {
@@ -94,6 +97,9 @@ void main()
         uvec2 edge = edge_indices[i];
         vec4 a = u_transform * tetra.vertices[edge.x];
         vec4 b = u_transform * tetra.vertices[edge.y];
+
+        a += u_translation;
+        b += u_translation;
 
         float t = -side(a) / (side(b) - side(a));
 
