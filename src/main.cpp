@@ -282,30 +282,30 @@ double round_nearest_tenth(double x)
 
 std::vector<four::Tetrahedra> run_qhull()
 {
-    std::vector<std::vector<four::combinatorics::PermutationSeed<float>>> all_permutation_seeds; //= four::get_all_permutation_seeds();
-    const float phi = (1.0f + sqrtf(5.0f)) / 2.0f;
-    const float phi_1 = phi;
-    const float phi_2 = powf(phi, 2.0f);
-    const float phi_3 = powf(phi, 3.0f);
-    const float phi_4 = powf(phi, 4.0f);
-    const float phi_5 = powf(phi, 5.0f);
-    const float phi_6 = powf(phi, 6.0f);
+    std::vector<std::vector<four::combinatorics::PermutationSeed<float>>> all_permutation_seeds = four::get_all_permutation_seeds();
+    //const float phi = (1.0f + sqrtf(5.0f)) / 2.0f;
+    //const float phi_1 = phi;
+    //const float phi_2 = powf(phi, 2.0f);
+    //const float phi_3 = powf(phi, 3.0f);
+    //const float phi_4 = powf(phi, 4.0f);
+    //const float phi_5 = powf(phi, 5.0f);
+    //const float phi_6 = powf(phi, 6.0f);
 
 
-    auto cell8 =
-    {
-        // All
-        four::combinatorics::PermutationSeed<float>{ { 1.0f, 1.0f, 1.0f, 1.0f }, true, four::combinatorics::Parity::ALL },
-        four::combinatorics::PermutationSeed<float>{ { 2.0f, 0.0f, 0.0f, 0.0f }, true, four::combinatorics::Parity::ALL },
+    //auto cell8 =
+    //{
+    //    // All
+    //    four::combinatorics::PermutationSeed<float>{ { 1.0f, 1.0f, 1.0f, 1.0f }, true, four::combinatorics::Parity::ALL },
+    //    four::combinatorics::PermutationSeed<float>{ { 2.0f, 0.0f, 0.0f, 0.0f }, true, four::combinatorics::Parity::ALL },
 
-        // Even
-        four::combinatorics::PermutationSeed<float>{ { phi, 1.0f, powf(phi, -1.0f), 0.0f }, true, four::combinatorics::Parity::EVEN },
-    };
+    //    // Even
+    //    four::combinatorics::PermutationSeed<float>{ { phi, 1.0f, powf(phi, -1.0f), 0.0f }, true, four::combinatorics::Parity::EVEN },
+    //};
 
-    for (size_t i = 0; i < 9; i++)
-    {
-        all_permutation_seeds.push_back(cell8);
-    }
+    //for (size_t i = 0; i < 6; i++)
+    //{
+    //    all_permutation_seeds.push_back(cell8);
+    //}
     std::vector<four::Tetrahedra> tetrahedra_groups;
 
     for (const auto& seeds : all_permutation_seeds)
@@ -495,16 +495,19 @@ int main()
             //if (topology_needs_update)
             for (size_t i = 0; i < renderer.get_number_of_objects(); i++)
             {
+                float pct = i / ((float)renderer.get_number_of_objects() + 1.0f);
+
                 glm::vec4 translation = {
-                    (i / static_cast<float>(renderer.get_number_of_objects() - 1.0f)) * 9 - 4.5f,
+                    (i / static_cast<float>(renderer.get_number_of_objects() - 1.0f)) * renderer.get_number_of_objects() - renderer.get_number_of_objects() * 0.5f,
                     0,
                     0.0,
-                     sinf(glfwGetTime() * 0.75f + i / ((float)renderer.get_number_of_objects() + 1.0f)) * 0.5f + 0.5f
+                    sinf(glfwGetTime() * 1.5f + 2.0f * pi * pct) * 0.5f + 0.5f
                 };
-                translation.w *= 0.5f;
+                translation.w *= 0.35f;
 
-                auto rotation = four::maths::get_simple_rotation_matrix(four::maths::Plane::XW, cosf(glfwGetTime() * 0.75f + i / ((float)renderer.get_number_of_objects() + 1.0f)));
-                renderer.set_transform(i, rotation * glm::mat4{ 0.5f }, translation);
+                auto rotation1 = four::maths::get_simple_rotation_matrix(four::maths::Plane::XW, cosf(glfwGetTime() + i / ((float)renderer.get_number_of_objects() + 1.0f)));
+                auto rotation2 = four::maths::get_simple_rotation_matrix(four::maths::Plane::ZW, sinf(glfwGetTime() + i / ((float)renderer.get_number_of_objects() + 1.0f)));
+                renderer.set_transform(i, rotation1 * rotation2 * glm::mat4{ 0.5f }, translation);
                 renderer.slice_object(i, hyperplane);
             }
 
