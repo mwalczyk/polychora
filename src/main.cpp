@@ -44,6 +44,7 @@ float rotation_xw = 0.0f;
 float rotation_yw = 0.0f;
 float rotation_zw = 0.0f;
 bool display_wireframe = false;
+bool display_tetrahedra = false;
 
 // Appearance settings
 ImVec4 clear_color = ImVec4(0.091f, 0.062f, 0.127f, 1.0f);
@@ -272,6 +273,10 @@ void initialize()
         // For now, we don't really know the winding order of the tetrahedron
         // slices, so we want to disable face culling
         glDisable(GL_CULL_FACE);
+
+        // Enable alpha blending
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
 }
 
@@ -282,30 +287,31 @@ double round_nearest_tenth(double x)
 
 std::vector<four::Tetrahedra> run_qhull()
 {
-    std::vector<std::vector<four::combinatorics::PermutationSeed<float>>> all_permutation_seeds = four::get_all_permutation_seeds();
-    //const float phi = (1.0f + sqrtf(5.0f)) / 2.0f;
-    //const float phi_1 = phi;
-    //const float phi_2 = powf(phi, 2.0f);
-    //const float phi_3 = powf(phi, 3.0f);
-    //const float phi_4 = powf(phi, 4.0f);
-    //const float phi_5 = powf(phi, 5.0f);
-    //const float phi_6 = powf(phi, 6.0f);
+    std::vector<std::vector<four::combinatorics::PermutationSeed<float>>> all_permutation_seeds;// four::get_all_permutation_seeds();
+    const float phi = (1.0f + sqrtf(5.0f)) / 2.0f;
+    const float phi_1 = phi;
+    const float phi_2 = powf(phi, 2.0f);
+    const float phi_3 = powf(phi, 3.0f);
+    const float phi_4 = powf(phi, 4.0f);
+    const float phi_5 = powf(phi, 5.0f);
+    const float phi_6 = powf(phi, 6.0f);
 
 
-    //auto cell8 =
-    //{
-    //    // All
-    //    four::combinatorics::PermutationSeed<float>{ { 1.0f, 1.0f, 1.0f, 1.0f }, true, four::combinatorics::Parity::ALL },
-    //    four::combinatorics::PermutationSeed<float>{ { 2.0f, 0.0f, 0.0f, 0.0f }, true, four::combinatorics::Parity::ALL },
+    auto cell =
+    {
+        // All
+        four::combinatorics::PermutationSeed<float>{ { 1.0f, 1.0f, 1.0f, 1.0f }, true, four::combinatorics::Parity::ALL },
+        four::combinatorics::PermutationSeed<float>{ { 2.0f, 0.0f, 0.0f, 0.0f }, true, four::combinatorics::Parity::ALL },
 
-    //    // Even
-    //    four::combinatorics::PermutationSeed<float>{ { phi, 1.0f, powf(phi, -1.0f), 0.0f }, true, four::combinatorics::Parity::EVEN },
-    //};
+        // Even
+        four::combinatorics::PermutationSeed<float>{ { phi, 1.0f, powf(phi, -1.0f), 0.0f }, true, four::combinatorics::Parity::EVEN },
+    };
 
-    //for (size_t i = 0; i < 6; i++)
-    //{
-    //    all_permutation_seeds.push_back(cell8);
-    //}
+    for (size_t i = 0; i < 1; i++)
+    {
+        all_permutation_seeds.push_back(cell);
+    }
+
     std::vector<four::Tetrahedra> tetrahedra_groups;
 
     for (const auto& seeds : all_permutation_seeds)
@@ -434,7 +440,6 @@ int main()
     shader_projections.uniform_mat4("u_four_model", simple_rotation_matrix); // Rotation matrix in 4D
     shader_projections.uniform_mat4("u_four_view", camera.look_at());
     shader_projections.uniform_mat4("u_four_projection", camera.projection());
-    shader_projections.uniform_bool("u_perspective_4D", false);
 
     // Uniforms for 3D -> 2D projection.
     shader_projections.uniform_mat4("u_three_view", arcball_camera_matrix);
@@ -477,10 +482,16 @@ int main()
             {
                 // Don't rebuild the rotation matrices unless we have to
                 simple_rotation_matrix = build_simple_rotation_matrix();
-                shader_projections.uniform_mat4("u_four_model", simple_rotation_matrix);
+                shader_projections.uniform_mat4("u_four_model_orientation", simple_rotation_matrix);
+                
+                renderer.set_transforms(simple_rotation_matrix);
             }
 
-            ImGui::Checkbox("Display Wireframe", &display_wireframe);
+            ImGui::Checkbox("Display Tetrahedra", &display_tetrahedra);
+            if (!display_tetrahedra)
+            {
+                ImGui::Checkbox("Display Wireframe", &display_wireframe);
+            }
 
             ImGui::End();
         }
@@ -493,41 +504,60 @@ int main()
         // Draw the 4D objects
         {
             //if (topology_needs_update)
-            for (size_t i = 0; i < renderer.get_number_of_objects(); i++)
+            //for (size_t i = 0; i < renderer.get_number_of_objects(); i++)
+            //{
+            //    float pct = i / ((float)renderer.get_number_of_objects() + 1.0f);
+
+            //    glm::vec4 translation = {
+            //        (i / static_cast<float>(renderer.get_number_of_objects() - 1.0f)) * renderer.get_number_of_objects() - renderer.get_number_of_objects() * 0.5f,
+            //        0,
+            //        0.0,
+            //        sinf(glfwGetTime() * 1.5f + 2.0f * pi * pct) * 0.5f + 0.5f
+            //    };
+            //    translation.w *= 0.35f;
+
+            //    auto rotation1 = four::maths::get_simple_rotation_matrix(four::maths::Plane::XW, cosf(glfwGetTime() + i / ((float)renderer.get_number_of_objects() + 1.0f)));
+            //    auto rotation2 = four::maths::get_simple_rotation_matrix(four::maths::Plane::ZW, sinf(glfwGetTime() + i / ((float)renderer.get_number_of_objects() + 1.0f)));
+            //    renderer.set_transform(i,  glm::mat4{ 0.5f }, translation);
+            //    renderer.slice_object(i, hyperplane);
+            //}
+            const auto projection = glm::perspective(glm::radians(zoom), static_cast<float>(window_w) / static_cast<float>(window_h), 0.1f, 1000.0f);
+
+            if (display_tetrahedra)
             {
-                float pct = i / ((float)renderer.get_number_of_objects() + 1.0f);
-
-                glm::vec4 translation = {
-                    (i / static_cast<float>(renderer.get_number_of_objects() - 1.0f)) * renderer.get_number_of_objects() - renderer.get_number_of_objects() * 0.5f,
-                    0,
-                    0.0,
-                    sinf(glfwGetTime() * 1.5f + 2.0f * pi * pct) * 0.5f + 0.5f
-                };
-                translation.w *= 0.35f;
-
-                auto rotation1 = four::maths::get_simple_rotation_matrix(four::maths::Plane::XW, cosf(glfwGetTime() + i / ((float)renderer.get_number_of_objects() + 1.0f)));
-                auto rotation2 = four::maths::get_simple_rotation_matrix(four::maths::Plane::ZW, sinf(glfwGetTime() + i / ((float)renderer.get_number_of_objects() + 1.0f)));
-                renderer.set_transform(i, rotation1 * rotation2 * glm::mat4{ 0.5f }, translation);
-                renderer.slice_object(i, hyperplane);
-            }
-
-
-            if (display_wireframe)
-            {
-                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+                for (size_t i = 0; i < renderer.get_number_of_objects(); i++)
+                {
+                    shader_projections.uniform_mat4("u_three_model", arcball_model_matrix);
+                    shader_projections.uniform_mat4("u_three_projection", projection);
+                    shader_projections.uniform_vec4("u_four_model_translation", renderer.get_translation(i));
+                    shader_projections.uniform_mat4("u_four_model_orientation", renderer.get_transform(i));
+                    shader_projections.uniform_bool("u_perspective_4D", true);
+                    renderer.draw_tetrahedra_object(i);
+                }
             }
             else
             {
-                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+                for (size_t i = 0; i < renderer.get_number_of_objects(); i++)
+                {
+                    renderer.slice_object(i, hyperplane);
+                }
+
+                if (display_wireframe)
+                {
+                    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+                }
+                else
+                {
+                    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+                }
+
+                shader_projections.use();
+                shader_projections.uniform_mat4("u_three_model", arcball_model_matrix);
+                shader_projections.uniform_mat4("u_three_projection", projection);
+                shader_projections.uniform_bool("u_perspective_4D", false);
+                renderer.draw_sliced_objects();
+                // OR: renderer.draw_sliced_object(polychoron_index);
             }
-
-            glm::mat4 projection = glm::perspective(glm::radians(zoom), static_cast<float>(window_w) / static_cast<float>(window_h), 0.1f, 1000.0f);
-
-            shader_projections.use();
-            shader_projections.uniform_mat4("u_three_model", arcball_model_matrix);
-            shader_projections.uniform_mat4("u_three_projection", projection);
-           // renderer.draw_sliced_object(polychoron_index);
-            renderer.draw_sliced_objects();
         }
 
         // Draw the ImGui window

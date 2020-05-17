@@ -8,7 +8,8 @@ uniform float u_time;
 // be the last column of this transformation matrix).
 uniform vec4 u_four_from;
 
-uniform mat4 u_four_model;
+uniform vec4 u_four_model_translation;
+uniform mat4 u_four_model_orientation;
 uniform mat4 u_four_view;
 uniform mat4 u_four_projection;
 
@@ -16,11 +17,11 @@ uniform mat4 u_three_model;
 uniform mat4 u_three_view;
 uniform mat4 u_three_projection;
 
-uniform bool u_perspective_4D;
-uniform bool u_perspective_3D;
+uniform bool u_perspective_4D = false;
+uniform bool u_perspective_3D = true;
 
-layout(location = 0) in vec4 position;
-layout(location = 1) in vec4 color;
+layout(location = 0) in vec4 i_position;
+layout(location = 1) in vec4 i_color;
 
 out VS_OUT
 {
@@ -29,9 +30,6 @@ out VS_OUT
 
     // Model-space position, after projection from 4D -> 3D
     vec3 position;
-
-    // Depth in the 4-th dimension
-    float depth_cue;
 } vs_out;
 
 // https://github.com/hughsk/glsl-hsv2rgb/blob/master/index.glsl
@@ -60,43 +58,55 @@ vec3 point_rotation_by_quaternion(in vec3 point, in vec4 q)
     return vec3(result.y, result.z, result.w);
 }
 
+float sigmoid(float x)
+{
+    return 1.0 / (1.0 + exp(-x));
+}
+
 void main()
 {
     bool perspective_4D = true;
     bool perspective_3D = true;
 
     vec4 four;
-    vs_out.depth_cue = position.w;
+    vec3 color;
 
     // Project 4D -> 3D with a perspective projection.
     if (u_perspective_4D)
     {
-        four = position;
+        four = u_four_model_orientation * i_position;
+        four = four + u_four_model_translation;
         four = four - u_four_from;
         four = u_four_view * four;
+        float depth_cue = four.w;
 
         four = u_four_projection * four;
         four /= four.w;
+
+        color = hsv2rgb(vec3(sigmoid(depth_cue), 1.0, 1.0));
     }
     // Project 4D -> 3D with a parallel (orthographic) projection.
     else
     {
-        // Simply drop the last (w) coordinate.
-        //four = u_four_model * position;
-        //four = vec4(four.xyz, 1.0);
-
         // TODO: the code above doesn't always work, since the `u_four_model` matrix (rotations)
         // TODO: is already applied to the tetrahedra vertices in the compute shader prior to
         // TODO: generating the 3D slice - we do a standard orthographic projection for this
         // TODO: draw mode, instead
         
-        four = vec4(position.xyz, 1.0);
+        four = vec4(i_position.xyz, 1.0);
+
+        vec3 rotation = point_rotation_by_quaternion(vec3(1.0, 0.0, 0.0), i_color);
+        vec3 rotation_color = normalize(rotation) * 0.5 + 0.5;
+        
+        color = rotation_color;
+        //vec3 cell_centroid = color.rgb;
+        //vec3 centroid_color = normalize(cell_centroid) * 0.5 + 0.5;
     }
 
     vec4 three;
 
     // Project 3D -> 2D with a perspective projection.
-    if(perspective_3D)
+    if(u_perspective_3D)
     {
         three = u_three_projection * u_three_view * u_three_model * four;
     }
@@ -107,17 +117,12 @@ void main()
     }
 
     gl_Position = three;
-    gl_PointSize = 3.0;
 
-    vec3 rotation = point_rotation_by_quaternion(vec3(1.0, 0.0, 0.0), color);
-    vec3 rotation_color = normalize(rotation) * 0.5 + 0.5;
     
-    vec3 cell_centroid = color.rgb;
-    vec3 centroid_color = normalize(cell_centroid) * 0.5 + 0.5;
 
     float alpha = u_perspective_4D ? 0.5 : 1.0;
 
     // Pass values to fragment shader.
-    vs_out.color = vec4(rotation_color, alpha);
+    vs_out.color = vec4(color, alpha);
     vs_out.position = four.xyz;
 }

@@ -5,24 +5,18 @@
 <p align="center">
   <img src="https://github.com/mwalczyk/four/blob/master/screenshots/mode_0.png" alt="screenshot" width="500" height="auto"/>
 </p>
-<p align="center">
-  <img src="https://github.com/mwalczyk/four/blob/master/screenshots/mode_1.png" alt="screenshot" width="500" height="auto"/>
-</p>
-<p align="center">
-  <img src="https://github.com/mwalczyk/four/blob/master/screenshots/mode_2.png" alt="screenshot" width="500" height="auto"/>
-</p>
 
 ## Description
 
 ### Projections
 
-After seeing videos of [Miegakure](http://miegakure.com/) gameplay, I became very interested in the idea of 4-dimensional rendering. It turns out that there are several ways to visualize higher dimensional objects. Perhaps the simplest method involves a projection from 4D to 3D. This is similar to how "traditional" 3D engines render objects to a 2D display surface (your screen). A 4D -> 3D projection can either be a perspective or parallel (orthographic) projection. However, instead of projecting objects onto a flat plane (as is the case in a 3D -> 2D projection), we project our 4-dimensional objects "onto" a 3-dimensional cuboid (in this case, the unit cube centered at the origin). From here, we simply perform the 3D -> 2D projection that we are used to.
+After seeing videos of [Miegakure](http://miegakure.com/) gameplay, I became very interested in the idea of 4-dimensional rendering. It turns out that there are several ways to visualize higher dimensional objects. Perhaps the simplest method involves a projection from 4D to 3D. This is similar to how "traditional" 3D engines render objects to a 2D display surface (your screen). A 4D-to-3D projection can either be a perspective or parallel (orthographic) projection. However, instead of projecting objects onto a flat plane (as is the case in a 3D-to-2D projection), we project our 4-dimensional objects "onto" a 3-dimensional cuboid (in this case, the unit cube centered at the origin). From here, we simply perform the 3D-to-2D projection that we are used to.
 
-Most people are familiar with this form of visualization. When a 4D -> 3D perspective projection is applied to the 8-cell (also known as the hypercube or [tesseract](https://en.wikipedia.org/wiki/Tesseract)), the result is the familiar animation of an "outer" cube with a smaller, nested "inner" cube that appears to unfold itself via a series of 4-dimensional plane rotations. The reason why this inner cube appears smaller is because it is "further away" in the 4th dimension (the `w`-axis of our 4D coordinate system). If you are interested in this form of visualization, I highly recommend Steven Hollasch's [thesis](http://hollasch.github.io/ray4/Four-Space_Visualization_of_4D_Objects.html#chapter4), titled _Four-Space Visualization of 4D Objects_.
+Most people are familiar with this form of visualization. When a 4D-to-3D perspective projection is applied to the 8-cell (also known as the hypercube or [tesseract](https://en.wikipedia.org/wiki/Tesseract)), the result is the familiar animation of an "outer" cube with a smaller, nested "inner" cube that appears to unfold itself via a series of 4-dimensional plane rotations. The reason why the inner cube appears smaller is because it is "further away" in the 4th dimension (the `w`-axis of our 4D coordinate system). If you are interested in this form of visualization, I highly recommend Steven Hollasch's [thesis](http://hollasch.github.io/ray4/Four-Space_Visualization_of_4D_Objects.html#chapter4), titled _Four-Space Visualization of 4D Objects_.
 
 ### Slicing
 
-A different way to visualize 4-dimensional objects is via a "slicing" procedure, which produces a series of 3-dimensional cross-sections of the full 4-dimensional shape. This is analogous to cutting 3D polyhedra with a plane (think MRI scans). Luckily, much of the math carries over to 4D. In order to facilitate this process, meshes in `polychora` are represented by a "shell" of tetrahedra. 
+A different way to visualize 4-dimensional objects is via a "slicing" procedure, which produces a series of 3-dimensional cross-sections of the full 4-dimensional shape. This is analogous to "cutting" a 3D polyhedron with a 2-dimensional plane (think MRI scans). Luckily, much of the math carries over to 4D. In order to facilitate this process, meshes in `polychora` are represented by a "shell" of tetrahedra. 
 
 Over the course of this research project, I have explored 2 different ways of generating polychora. Currently, shapes are generated in a fully procedural manner using combinatorics and [QHull](http://www.qhull.org/), a library for computing n-dimensional convex hulls. The coordinates of the vertices of all uniform + regular polychora are known and can be calculated via a set of even/odd permutations and changes-of-sign. For example, the 120-cell can be generated via the following "permutation table" (taken from the amazing catalog available at [Eusebeia](http://eusebeia.dyndns.org/4d/120-cell)):
 
@@ -44,7 +38,7 @@ where φ is the Golden Ratio.
 
 ```
 
-I wrote a C++ header file for enumerating such permutations, together with help from the C++ standard template library and a header file from Eusebeia (for generating only the even permutations). Once the vertices are generated, we can pass them to QHull's convex hull algorithm. Enabling the `Qt` flag results in a list of simplical facets, which can be directly passed into the slicing procedure.
+I wrote a C++ header file for enumerating such permutations, together with help from the C++ standard template library and a header file from Eusebeia (for generating _only_ the [even permutations](https://en.wikipedia.org/wiki/Parity_of_a_permutation)). Once the vertices are generated, we can pass them to QHull's convex hull algorithm. Enabling the `Qt` "triangulation" flag results in a list of simplical facets, which can be directly passed into the slicing pipeline.
 
 Previously, polychora were generated in a more ad-hoc manner, using a variety of modified "shape files" that I found on the internet (mostly from Paul Bourke's [website](http://paulbourke.net/geometry/hyperspace/)). You can find the corresponding code in an [older, less polished version](https://github.com/mwalczyk/four) of this project, which was also written in Rust. The advantage of this approach was that it gave access to all of the connectivity information of each polychoron: vertices, edges, faces, and cells. However, because the resulting facets weren't necessarily tetrahedral, I had to algorithmically "tetrahedralize" each mesh before rendering.
 
@@ -80,6 +74,8 @@ while(i < array.length())
     i++;
 }
 ```
+
+After the slices are computed, the resulting object is rendered via a separate vertex / fragment shader that simply performs an orthographic 4D-to-3D projection. 
 
 ## Tested On
 
@@ -131,7 +127,7 @@ All of the draw modes listed above will be affected by the 4-dimensional rotatio
 
 "T" (the author of Eusebeia, mentioned below) recommended the "double description method" for computing higher-dimensional convex hulls. This algorithm is implemented in the [cddlib](https://github.com/cddlib/cddlib) library and supposedly produces more geometrically accurate results. "T" also mentioned that many convex hull algorithms (including QHull) will "triangulate" the output, breaking it into n-dimensional simplices during execution. Since a 4-simplex is a tetrahedron, this makes the slicing procedure relatively straightforward. However, the resulting topology usually doesn't feel as "clean" as the output that I initially generated by manually tetrahedralizing the mesh. This might be because the resulting tetrahedra don't necessarily have uniform volume / size. Disabling the `Qt` triangulation flag in QHull would likely produce a set of non-simplical facet cells, which could be tetrahedralized manually using the aforementioned procedure, but this requires further investigation. 
 
-One other idea I had exploits the fact that the dual of a regular polychoron is itself a regular polychoron. For example, the 120-cell and 600-cell are dual to each other. This means that the vertices of the 600-cell (of which there are 120) correspond to the cell centers of the 120-cell. Recall that the 120-cell is composed of 120 dodecahedral cells. Generating the vertices, edges, and faces of a dodecahedron is easy, so we could, in theory, create 120 dodecahedrons (embedded in 4-space) and center each of them at one of the vertices of the 600-cell. This construction would give us the complete 120-cell. One problem I could forsee is, each of the dodecahedral cells may require some sort of rotation in order to form a fully closed hyper-surface. Let's think about the analogous problem in one lower dimension: a dodecahedron is composed of 12 pentagonal faces. We can create 12 regular pentagons in the XY-plane and translate each so that its center point coincides with one of the 12 vertices of the dodecahedron's dual (the icosahedron). To form a closed surface, we must rotate each face so that its outward normal aligns with the vector pointing from the dodecahedron's center towards the facet center.
+Another idea I had exploits the fact that the dual of a regular polychoron is itself a regular polychoron. For example, the 120-cell and 600-cell are dual to each other. This means that the vertices of the 600-cell (of which there are 120) correspond to the cell centers of the 120-cell. Recall that the 120-cell is composed of 120 dodecahedral cells. Generating the vertices, edges, and faces of a dodecahedron is easy, so we could, in theory, create 120 dodecahedrons (embedded in 4-space) and center each of them at one of the vertices of the 600-cell. This construction would give us the complete 120-cell. One problem I could forsee is, each of the dodecahedral cells may require some sort of rotation in order to form a fully closed hyper-surface. Let's think about the analogous problem in one lower dimension: a dodecahedron is composed of 12 pentagonal faces. We can create 12 regular pentagons in the XY-plane and translate each so that its center point coincides with one of the 12 vertices of the dodecahedron's dual (the icosahedron). To form a closed surface, we must rotate each face so that its outward normal aligns with the vector pointing from the dodecahedron's center towards the facet center.
 
 The software package [Stella4D](https://www.software3d.com/StellaManual.php?prod=stella4D) also has some interesting notes in the manual.
 
