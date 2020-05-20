@@ -3,7 +3,7 @@
 💎 A 4D renderer and polychoron generator.
 
 <p align="center">
-  <img src="https://github.com/mwalczyk/four/blob/master/screenshots/mode_0.png" alt="screenshot" width="500" height="auto"/>
+  <img src="https://raw.githubusercontent.com/mwalczyk/four/master/screenshots/polychora_slicing.gif" alt="screenshot" width="500" height="auto"/>
 </p>
 
 ## Description
@@ -43,10 +43,6 @@ I wrote a C++ header file for enumerating such permutations, together with help 
 Previously, polychora were generated in a more ad-hoc manner, using a variety of modified "shape files" that I found on the internet (mostly from Paul Bourke's [website](http://paulbourke.net/geometry/hyperspace/)). You can find the corresponding code in an [older, less polished version](https://github.com/mwalczyk/four) of this project, which was also written in Rust. The advantage of this approach was that it gave access to all of the connectivity information of each polychoron: vertices, edges, faces, and cells. However, because the resulting facets weren't necessarily tetrahedral, I had to algorithmically "tetrahedralize" each mesh before rendering.
 
 Tetrahedralization in 4-space is similar to triangulation in 3-space. In particular, [any 3D convex polyhedron can be decomposed into tetrahedrons](https://mathoverflow.net/questions/7647/break-polyhedron-into-tetrahedron) by first subdividing its faces into triangles. Next, we pick a vertex from the polyhedron (any vertex will do). We connect all of the other face triangles to the chosen vertex to form a set of tetrahedra (obviously, ignoring faces that contain the chosen vertex). This is not necessarily the "minimal tetrahedral decomposition" of the polyhedron (which is an active area of research for many polytopes), but it always works. An example of this process for a regular, 3D cube can be found [here](https://www.ics.uci.edu/~eppstein/projects/tetra/).
-
-<p align="center">
-  <img src="https://github.com/mwalczyk/four/blob/master/screenshots/screenshot.gif" alt="screenshot" width="150" height="auto"/>
-</p>
 
 So, I started with a 4D polychoron, whose "faces" (i.e. "cells") are themselves convex polyhedra embedded in 4-dimensions. One by one, I "tetrahedralized" each cell. Together, the sum of these tetrahedra formed the desired 4-dimensional mesh. For example, the hypercube has 8 cells, each of which is a cube (this is why the hypercube is called the 8-cell). Each cube produces 6 distinct tetrahedra, so all together, the tetrahedral decomposition of the hypercube results in 48 tetrahedra. For a visual example of this procedure in 3-space, see the following Stack Overflow post: ["How to Make an Icosahedron from 20 Tetrahedra"](https://math.stackexchange.com/questions/1340470/how-to-make-an-icosahedron-from-20-tetrahedra).
 
@@ -139,6 +135,8 @@ The idea to use a convex hull algorithm came from "T," the author of [Eusebeia](
 
 Thanks to [@GSBicalho](https://github.com/GSBicalho) and [@willnode](https://github.com/willnode) for their additional guidance throughout this project. Their responses to my questions were vital towards my understanding the 4D slicing procedure. 
 
+Thanks to [Dr. Libor Vasa](http://meshcompression.org/) who also answered several of my questions early on about the 120-cell.
+
 Other resources that I found helpful throughout the creation of this project include:
 
 - [A General Purpose Animation System for 4D](https://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=7968&context=etd)
@@ -150,6 +148,7 @@ Other resources that I found helpful throughout the creation of this project inc
 - ["How Should I Handle (Morphing) 4D Objects in OpenGL?"](https://stackoverflow.com/questions/44939879/how-should-i-handle-morphing-4d-objects-in-opengl?noredirect=1&lq=1)
 - ["Calculate 3D Cross-Section of 4D Shape"](https://stackoverflow.com/questions/50008610/calculate-3d-cross-section-of-4d-shape-tesseract/50016144#50016144)
 - [Four Dimensional Dice Up To Twenty Sides](http://www.polytope.net/hedrondude/dice4.htm)
+- [Normal Vectors in Higher Dimensions](https://ef.gy/linear-algebra:normal-vectors-in-higher-dimensional-spaces)
 
 ### License
 [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/)

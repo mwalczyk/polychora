@@ -298,13 +298,18 @@ std::vector<four::Tetrahedra> run_qhull()
 
 
     auto cell =
+        // 120-cell
     {
         // All
-        four::combinatorics::PermutationSeed<float>{ { 1.0f, 1.0f, 1.0f, 1.0f }, true, four::combinatorics::Parity::ALL },
-        four::combinatorics::PermutationSeed<float>{ { 2.0f, 0.0f, 0.0f, 0.0f }, true, four::combinatorics::Parity::ALL },
+        four::combinatorics::PermutationSeed<float>{ { 2.0f, 2.0f, 0.0f, 0.0f }, true, four::combinatorics::Parity::ALL },
+        four::combinatorics::PermutationSeed<float>{ { sqrtf(5.0f), 1.0f, 1.0f, 1.0f }, true, four::combinatorics::Parity::ALL },
+        four::combinatorics::PermutationSeed<float>{ { phi, phi, phi, powf(phi, -2.0f) }, true, four::combinatorics::Parity::ALL },
+        four::combinatorics::PermutationSeed<float>{ { powf(phi, 2.0f), powf(phi, -1.0f), powf(phi, -1.0f), powf(phi, -1.0f) }, true, four::combinatorics::Parity::ALL },
 
         // Even
-        four::combinatorics::PermutationSeed<float>{ { phi, 1.0f, powf(phi, -1.0f), 0.0f }, true, four::combinatorics::Parity::EVEN },
+        four::combinatorics::PermutationSeed<float>{ { powf(phi, 2.0f),  powf(phi, -2.0f), 1.0f, 0.0f }, true, four::combinatorics::Parity::EVEN },
+        four::combinatorics::PermutationSeed<float>{ { sqrtf(5.0f),  powf(phi, -1.0f), phi, 0.0f }, true, four::combinatorics::Parity::EVEN },
+        four::combinatorics::PermutationSeed<float>{ { 2.0f, 1.0f, phi, powf(phi, -1.0f) }, true, four::combinatorics::Parity::EVEN }
     };
 
     for (size_t i = 0; i < 1; i++)
@@ -342,7 +347,7 @@ std::vector<four::Tetrahedra> run_qhull()
         try {
             // Run QHull
             std::cout << "Running convex hull algorithm on " << permutations.size() << " vertices" << std::endl;
-            qhull.runQhull("", 4, permutations.size(), coordinates.data(), "Qt");
+            qhull.runQhull("", 4, permutations.size(), coordinates.data(), "C0.001"); // Qt
 
             // Process unique points that form the convex hull
             for (const auto& point : qhull.points())
@@ -383,6 +388,28 @@ std::vector<four::Tetrahedra> run_qhull()
             std::cout << vertices.size() << " vertices" << std::endl;
             std::cout << simplices.size() / 4 << " simplices" << std::endl;
             std::cout << normals.size() << " hyperplane normals" << std::endl;
+
+            std::cout << "Finding smallest distance between any two vertices of the convex hull..." << std::endl;
+            float smallest = std::numeric_limits<float>::max();
+
+            for (size_t i = 0; i < vertices.size(); ++i)
+            {
+                for (size_t j = 0; j < vertices.size(); ++j)
+                {
+                    if (i != j)
+                    {
+                        const float distance = glm::distance(vertices[i], vertices[j]);
+                        if (distance < smallest)
+                        {
+                            smallest = distance;
+                        }
+                    }
+                }
+            }
+
+            std::cout << "Smallest distance: " << smallest << std::endl;
+            std::cout << "Finding edges (brute force)..." << std::endl;
+
         }
         catch (std::exception e)
         {
