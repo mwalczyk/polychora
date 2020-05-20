@@ -3,7 +3,7 @@
 💎 A 4D renderer and polychoron generator.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/mwalczyk/four/master/screenshots/polychora_slicing.gif" alt="screenshot" width="500" height="auto"/>
+  <img src="https://raw.githubusercontent.com/mwalczyk/polychora/master/screenshots/polychora_slicing.gif" alt="screenshot" width="500" height="auto"/>
 </p>
 
 ## Description
