@@ -25,14 +25,14 @@ All permutations and changes-of-sign of:
 
   (2, 2, 0, 0)
   (√5, 1, 1, 1)
-  (φ, φ, φ, φ−2)
-  (φ2, φ−1, φ−1, φ−1)
+  (φ, φ, φ, φ^−2)
+  (φ2, φ^−1, φ^−1, φ^−1)
 
 Together with all even permutations and changes-of-sign of:
 
-  (φ2, φ−2, 1, 0)
-  (√5, φ−1, φ, 0)
-  (2, 1, φ, φ−1)
+  (φ^2, φ^−2, 1, 0)
+  (√5, φ^−1, φ, 0)
+  (2, 1, φ, φ^−1)
 
 where φ is the Golden Ratio.
 
@@ -40,7 +40,7 @@ where φ is the Golden Ratio.
 
 I wrote a C++ header file for enumerating such permutations, together with help from the C++ standard template library and a header file from Eusebeia (for generating _only_ the [even permutations](https://en.wikipedia.org/wiki/Parity_of_a_permutation)). Once the vertices are generated, we can pass them to QHull's convex hull algorithm. Enabling the `Qt` "triangulation" flag results in a list of simplical facets, which can be directly passed into the slicing pipeline.
 
-Previously, polychora were generated in a more ad-hoc manner, using a variety of modified "shape files" that I found on the internet (mostly from Paul Bourke's [website](http://paulbourke.net/geometry/hyperspace/)). You can find the corresponding code in an [older, less polished version](https://github.com/mwalczyk/four) of this project, which was also written in Rust. The advantage of this approach was that it gave access to all of the connectivity information of each polychoron: vertices, edges, faces, and cells. However, because the resulting facets weren't necessarily tetrahedral, I had to algorithmically "tetrahedralize" each mesh before rendering.
+Previously, polychora were generated in a more ad-hoc manner, using a variety of modified "shape files" that I found on the internet (mostly from Paul Bourke's [website](http://paulbourke.net/geometry/hyperspace/)). You can find the corresponding code in an [older, less polished version](https://github.com/mwalczyk/four) of this project, which was also written in Rust. I really wanted to get away from this approach, as I didn't like the idea of storing "hard-coded" shape files in the project. Plus, generating shapes procedurally led to some very interesting challenges. However, the advantage of this "older" approach was that it gave access to all of the connectivity information of each polychoron: vertices, edges, faces, and cells. However, because the resulting facets weren't necessarily tetrahedral, I had to algorithmically "tetrahedralize" each mesh before rendering.
 
 Tetrahedralization in 4-space is similar to triangulation in 3-space. In particular, [any 3D convex polyhedron can be decomposed into tetrahedrons](https://mathoverflow.net/questions/7647/break-polyhedron-into-tetrahedron) by first subdividing its faces into triangles. Next, we pick a vertex from the polyhedron (any vertex will do). We connect all of the other face triangles to the chosen vertex to form a set of tetrahedra (obviously, ignoring faces that contain the chosen vertex). This is not necessarily the "minimal tetrahedral decomposition" of the polyhedron (which is an active area of research for many polytopes), but it always works. An example of this process for a regular, 3D cube can be found [here](https://www.ics.uci.edu/~eppstein/projects/tetra/).
 
@@ -133,7 +133,7 @@ Marc Ten Bosch (the author of Miegakure) has written extensively on the topic of
 
 The idea to use a convex hull algorithm came from "T," the author of [Eusebeia](http://eusebeia.dyndns.org/4d/). Their site is one of the most amazing resources on higher-dimensional rendering. Throughout the early stages of this project, "T" answered many of my (probably dumb) questions and provided a great deal of help and guidance. 
 
-Thanks to [@GSBicalho](https://github.com/GSBicalho) and [@willnode](https://github.com/willnode) for their additional guidance throughout this project. Their responses to my questions were vital towards my understanding the 4D slicing procedure. 
+Thanks to [@GSBicalho](https://github.com/GSBicalho) and [@willnode](https://github.com/willnode) for their additional guidance throughout this project. Their responses to my questions were vital towards my understanding the 4D slicing procedure. [@willnode](https://github.com/willnode) is the author of an amazing asset on the Unity store for rendering 4D shapes called [Engine4](https://assetstore.unity.com/packages/tools/modeling/engine-4-34475), which you should absolutely check out if you are a Unity user.
 
 Thanks to [Dr. Libor Vasa](http://meshcompression.org/) who also answered several of my questions early on about the 120-cell.
 
