@@ -5,7 +5,7 @@
 uniform float u_time;
 
 // We have this here in order to avoid 5x5 matrices (technically, the would
-// be the last column of this transformation matrix).
+// be the last column of this transformation matrix)
 uniform vec4 u_four_from;
 
 uniform vec4 u_four_model_translation;
@@ -20,24 +20,23 @@ uniform mat4 u_three_projection;
 uniform bool u_perspective_4D = false;
 uniform bool u_perspective_3D = true;
 
+uniform float u_clip_distance_w = 0.0;
+
 layout(location = 0) in vec4 i_position;
 layout(location = 1) in vec4 i_color;
 
 out VS_OUT
 {
-    // A per-cell color
     vec4 color;
-
-    // Model-space position, after projection from 4D -> 3D
     vec3 position;
 } vs_out;
 
 // https://github.com/hughsk/glsl-hsv2rgb/blob/master/index.glsl
-vec3 hsv2rgb(vec3 c)
+vec3 hsv_to_rgb(vec3 c)
 {
-    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
-    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+    vec4 k = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + k.xyz) * 6.0 - k.www);
+    return c.z * mix(k.xxx, clamp(p - k.xxx, 0.0, 1.0), c.y);
 }
 
 vec4 quaternion_mult(in vec4 q, in vec4 r)
@@ -65,64 +64,69 @@ float sigmoid(float x)
 
 void main()
 {
-    bool perspective_4D = true;
-    bool perspective_3D = true;
-
     vec4 four;
     vec3 color;
 
-    // Project 4D -> 3D with a perspective projection.
+    // Custom 4-dimensional clipping plane: useful for revealing different
+    // "layers" of the 4D object
+    if (i_position.w > u_clip_distance_w)
+    {
+        gl_ClipDistance[0] = -1.0;
+    }
+    else 
+    {
+        gl_ClipDistance[0] = 1.0;
+    }
+
+    // Project 4D -> 3D with a perspective projection
     if (u_perspective_4D)
     {
         four = u_four_model_orientation * i_position;
         four = four + u_four_model_translation;
         four = four - u_four_from;
         four = u_four_view * four;
-        float depth_cue = four.w;
+        
+        // This is sometimes interesting too...
+        //four = vec4(four.xyz, 1.0);
 
         four = u_four_projection * four;
         four /= four.w;
 
-        color = hsv2rgb(vec3(sigmoid(depth_cue), 1.0, 1.0));
+        float depth_cue = i_position.w * 0.5 + 0.5;
+
+        color = hsv_to_rgb(vec3(depth_cue * 0.5, 1.0, 1.0));
     }
-    // Project 4D -> 3D with a parallel (orthographic) projection.
+    // Project 4D -> 3D with a parallel (orthographic) projection
     else
     {
         // TODO: the code above doesn't always work, since the `u_four_model` matrix (rotations)
         // TODO: is already applied to the tetrahedra vertices in the compute shader prior to
         // TODO: generating the 3D slice - we do a standard orthographic projection for this
         // TODO: draw mode, instead
-        
         four = vec4(i_position.xyz, 1.0);
 
         vec3 rotation = point_rotation_by_quaternion(vec3(1.0, 0.0, 0.0), i_color);
         vec3 rotation_color = normalize(rotation) * 0.5 + 0.5;
         
         color = rotation_color;
-        //vec3 cell_centroid = color.rgb;
-        //vec3 centroid_color = normalize(cell_centroid) * 0.5 + 0.5;
+        
+        vec3 cell_centroid = i_color.rgb;
+        vec3 centroid_color = normalize(cell_centroid) * 0.5 + 0.5;
+
+        color = centroid_color;
     }
 
     vec4 three;
 
-    // Project 3D -> 2D with a perspective projection.
-    if(u_perspective_3D)
-    {
-        three = u_three_projection * u_three_view * u_three_model * four;
-    }
-    // Project 3D -> 2D with a parallel (orthographic) projection.
-    else
-    {
-        // TODO: is support for a 3D -> 2D orthographic projection useful / necessary?
-    }
+    // Project 3D -> 2D with a perspective projection
+    three = u_three_projection * u_three_view * u_three_model * four;
 
     gl_Position = three;
 
-    
+    // Alpha based on depth in the 4th dimension
+    float alpha = u_perspective_4D ? i_position.w * 0.5 + 0.5 : 1.0;
 
-    float alpha = u_perspective_4D ? 0.5 : 1.0;
-
-    // Pass values to fragment shader.
+    // Pass values to fragment shader
     vs_out.color = vec4(color, alpha);
     vs_out.position = four.xyz;
 }

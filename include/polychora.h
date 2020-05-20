@@ -1891,8 +1891,6 @@ namespace four
 
     std::vector<Hyperplane> get_h_representation(Polychoron polychoron)
     {
-        // TODO: only for Cell8
-
         // By definition, a polychoron's dual has a vertex at the center of each of the
         // "original" polychoron's cells. We can exploit this information in order to find
         // the distance from each of the bounding hyperplanes in this polychoron's H-representation
@@ -1944,7 +1942,6 @@ namespace four
 
         // Calculate the midpoint of any edge, find its distance to the origin and use this
         // as the displacement?
-
         std::vector<Hyperplane> bounding_hyperplanes;
 
         for (const auto& vertex : get_vertices(get_dual(polychoron)))

@@ -17,7 +17,9 @@ namespace four
         std::vector<glm::vec4> vertices;
 
         // All of the simplex indices (4 indices per tetrahedra)
-        std::vector<size_t> simplices;
+        std::vector<uint32_t> simplices;
+
+        std::vector<uint32_t> edges;
 
         // All of the hyperplane normals corresponding to each tetrahedron (from convex hull)
         std::vector<glm::vec4> normals;
@@ -51,6 +53,7 @@ namespace four
             std::vector<glm::vec4> tetrahedra_vertices;
             std::vector<glm::vec4> tetrahedra_colors;
             batch.number_of_tetrahedra = tetrahedra.simplices.size() / 4;
+            batch.number_of_edges = tetrahedra.edges.size() / 2;
 
             // Any tetrahedral slice can have at most 6 vertices (a quadrilateral, 2 triangles)
             const size_t max_vertices_per_slice = 6;
@@ -92,13 +95,11 @@ namespace four
 
                 auto vertices_size = sizeof(glm::vec4) * number_of_vertices_per_tetrahedron * batch.number_of_tetrahedra;
                 auto colors_size = sizeof(glm::vec4) * max_vertices_per_slice * batch.number_of_tetrahedra;
-                std::cout << "Vertices buffer size: " << vertices_size << std::endl;
-                std::cout << "Colors buffer size: " << colors_size << std::endl;
 
                 // The VBO that will be associated with the vertex attribute #1, which does not change
                 // throughout the lifetime of the program (thus, we use the flag `STATIC_DRAW` below)
-                glCreateBuffers(1, &batch.buffer_slice_colors);
-                glNamedBufferData(batch.buffer_slice_colors, colors_size, tetrahedra_colors.data(), GL_STATIC_DRAW);
+                glCreateBuffers(1, &batch.buffer_slice_hyperplane_normals);
+                glNamedBufferData(batch.buffer_slice_hyperplane_normals, colors_size, tetrahedra_colors.data(), GL_STATIC_DRAW);
 
                 // The buffer that will be bound at index #0 and read from
                 glCreateBuffers(1, &batch.buffer_tetrahedra);
@@ -116,7 +117,7 @@ namespace four
 
                 // Setup vertex attribute bindings
                 glVertexArrayVertexBuffer(batch.vao_slice, binding_pos, batch.buffer_slice_vertices, 0, sizeof(glm::vec4));
-                glVertexArrayVertexBuffer(batch.vao_slice, binding_col, batch.buffer_slice_colors, 0, sizeof(glm::vec4));
+                glVertexArrayVertexBuffer(batch.vao_slice, binding_col, batch.buffer_slice_hyperplane_normals, 0, sizeof(glm::vec4));
 
                 std::array<int32_t, 3> local_size;
                 glGetProgramiv(compute.get_handle(), GL_COMPUTE_WORK_GROUP_SIZE, local_size.data());
@@ -124,64 +125,60 @@ namespace four
 
             std::vector<uint32_t> tetrahedra_indices;
 
-            // Gather the base indices used for drawing a tetrahedron, i.e.
-            // `[(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)]`, and apply
-            // relative offsets
-            auto local_indices = get_edge_indices();
-
-            for (size_t tetrahedron_index = 0; tetrahedron_index < batch.number_of_tetrahedra; tetrahedron_index++)
+            for (size_t simplex_index = 0; simplex_index < tetrahedra.simplices.size() / 4; ++simplex_index)
             {
-                // Generate a new set of edge indices for this tetrahedron
-                for (auto [a, b] : local_indices)
-                {
-                    // Create a new set of indices to draw the current tetrahedron. First,
-                    // we add `4 * i`, since each tetrahedron has 4 vertices
-                    uint32_t offset = 4 * tetrahedron_index;
+                // Grab the vertex IDs of this simplex
+                auto a = tetrahedra.simplices[simplex_index * 4 + 0];
+                auto b = tetrahedra.simplices[simplex_index * 4 + 1];
+                auto c = tetrahedra.simplices[simplex_index * 4 + 2];
+                auto d = tetrahedra.simplices[simplex_index * 4 + 3];
+        
+                // Each simplex has 6 unique edges, we can easily enumerate these: { (0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3) }
+                tetrahedra_indices.push_back(a);
+                tetrahedra_indices.push_back(b);
 
-                    tetrahedra_indices.push_back(a + offset);
-                    tetrahedra_indices.push_back(b + offset);
-                }
+                tetrahedra_indices.push_back(a);
+                tetrahedra_indices.push_back(c);
+
+                tetrahedra_indices.push_back(a);
+                tetrahedra_indices.push_back(d);
+
+                tetrahedra_indices.push_back(b);
+                tetrahedra_indices.push_back(c);
+
+                tetrahedra_indices.push_back(b);
+                tetrahedra_indices.push_back(d);
+
+                tetrahedra_indices.push_back(c);
+                tetrahedra_indices.push_back(d);
             }
 
             {
-                // First, create the vertex array object.
-                glCreateVertexArrays(1, &batch.vao_tetrahedra);
+                // Create the vertex array object
+                glCreateVertexArrays(1, &batch.vao_skeleton);
 
-                // Create the element buffer that will hold all of the edge indices for rendering
-                // wireframes of all of the tetrahedra that make up this polychoron.
-                auto indices_size = tetrahedra_indices.size() * sizeof(uint32_t);
-
+                // The indices that will be used to draw the wireframes of all of the tetrahedra that make up this mesh
                 glCreateBuffers(1, &batch.ebo_tetrahedra);
-                glNamedBufferData(
-                    batch.ebo_tetrahedra,
-                    indices_size,
-                    tetrahedra_indices.data(),
-                    GL_DYNAMIC_DRAW
-                    );
+                glNamedBufferData(batch.ebo_tetrahedra, tetrahedra_indices.size() * sizeof(uint32_t), tetrahedra_indices.data(), GL_STATIC_DRAW);
 
-                glEnableVertexArrayAttrib(batch.vao_tetrahedra, 0);
-                glVertexArrayAttribFormat(
-                    batch.vao_tetrahedra,
-                    0,
-                    4,
-                    GL_FLOAT,
-                    GL_FALSE,
-                    0
-                    );
-                glVertexArrayAttribBinding(batch.vao_tetrahedra, 0, 0);
+                // The indices that will be used to draw the "skeleton" (i.e. unique edges) of the mesh
+                glCreateBuffers(1, &batch.ebo_edges);
+                glNamedBufferData(batch.ebo_edges, tetrahedra.edges.size() * sizeof(uint32_t), tetrahedra.edges.data(), GL_STATIC_DRAW);
+            
+                // The buffer containing all of the unique vertices of the mesh
+                glCreateBuffers(1, &batch.buffer_vertices);
+                glNamedBufferData(batch.buffer_vertices, tetrahedra.vertices.size() * sizeof(glm::vec4), tetrahedra.vertices.data(), GL_STATIC_DRAW);
 
-                // Setup vertex attribute bindings: notice that we use the same VBO from above that
-                // holds all of the vertices of the tetrahedra that make up this polychoron.
-                glVertexArrayVertexBuffer(
-                    batch.vao_tetrahedra,
-                    0,
-                    batch.buffer_tetrahedra,
-                    0,
-                    sizeof(float) * 4
-                    );
+                // Set up attribute #0: positions
+                glEnableVertexArrayAttrib(batch.vao_skeleton, 0);
+                glVertexArrayAttribFormat(batch.vao_skeleton, 0, 4, GL_FLOAT, GL_FALSE, 0);
+                glVertexArrayAttribBinding(batch.vao_skeleton, 0, 0);
 
-                // Bind the EBO to the VAO.
-                glVertexArrayElementBuffer(batch.vao_tetrahedra, batch.ebo_tetrahedra);
+                // Setup vertex attribute bindings
+                glVertexArrayVertexBuffer(batch.vao_skeleton, 0, batch.buffer_vertices, 0, sizeof(float) * 4);
+
+                // Bind the EBO to the VAO (this might be switched during rendering)
+                glVertexArrayElementBuffer(batch.vao_skeleton, batch.ebo_tetrahedra);
             }
 
             batches.push_back(batch);
@@ -266,20 +263,32 @@ namespace four
             }
         }
 
-        void draw_tetrahedra_object(size_t index) const
+        void draw_skeleton_object(size_t index, bool tetrahedra_wireframes = true) const
         {
-            // 6 edges per tetrahedra, 2 components each
-            size_t number_of_tetrahedral_edges = batches[index].number_of_tetrahedra * 6 * 2;
+            glBindVertexArray(batches[index].vao_skeleton);
+            
+            if (tetrahedra_wireframes)
+            {
+                // 6 edges per tetrahedra, 2 components each
+                size_t number_of_tetrahedral_edges = batches[index].number_of_tetrahedra * 6 * 2;
 
-            glBindVertexArray(batches[index].vao_tetrahedra);
-            glDrawElements(GL_LINES, number_of_tetrahedral_edges, GL_UNSIGNED_INT, nullptr);
+                glVertexArrayElementBuffer(batches[index].vao_skeleton, batches[index].ebo_tetrahedra);
+                glDrawElements(GL_LINES, number_of_tetrahedral_edges, GL_UNSIGNED_INT, nullptr);
+            }
+            else
+            {
+                // The `number_of_edges` member will be set to the length of the edges EBO / 2, so we 
+                // want to make sure to multiply by 2 again here
+                glVertexArrayElementBuffer(batches[index].vao_skeleton, batches[index].ebo_edges);
+                glDrawElements(GL_LINES, batches[index].number_of_edges * 2, GL_UNSIGNED_INT, nullptr);
+            }
         }
 
-        void draw_tetrahedra_objects() const
+        void draw_skeleton_objects(bool tetrahedra_wireframes = true) const
         {
             for (size_t index = 0; index < batches.size(); index++)
             {
-                draw_tetrahedra_object(index);
+                draw_skeleton_object(index, tetrahedra_wireframes);
             }
         }
 
@@ -298,21 +307,29 @@ namespace four
             /// The vertex array object (VAO) that is used for drawing a 3D slice of this mesh
             uint32_t vao_slice = 0;
 
-            /// A GPU-side buffer that contains all of the tetrahedra that make up this mesh
+            /// A GPU-side buffer that contains all of the tetrahedra that make up this mesh (4 vertices per tetrahedron)
             uint32_t buffer_tetrahedra = 0;
 
-            /// A GPU-side buffer that contains all of the colors used to render 3-dimensional slices of this mesh
-            uint32_t buffer_slice_colors = 0;
+            /// A GPU-side buffer that contains all of the hyperplane normals corresponding to each of the sliced tetrahedra
+            uint32_t buffer_slice_hyperplane_normals = 0;
 
             /// A GPU-side buffer that contains all of the vertices that make up the active 3-dimensional cross-section of this mesh
             uint32_t buffer_slice_vertices = 0;
 
             /// A GPU-side buffer that will be filled with indirect drawing commands via the `compute` program
-            uint32_t buffer_indirect_commands;
+            uint32_t buffer_indirect_commands = 0;
 
-            uint32_t vao_tetrahedra;
+            /// The vertex array object (VAO) that is used for drawing an "outline" of this mesh (either edges or tetrahedra wireframes) 
+            uint32_t vao_skeleton = 0;
 
-            uint32_t ebo_tetrahedra;
+            /// The index buffer used for rendering tetrahedra wireframes
+            uint32_t ebo_tetrahedra = 0;
+
+            /// The index buffer used for rendering edges (of the entire polychoron)
+            uint32_t ebo_edges = 0;
+
+            /// A GPU-side buffer that contains all of the unique vertices that make up this 4-dimensional mesh
+            uint32_t buffer_vertices = 0;
 
             /// This batch's transformation matrix (in 4-space)
             glm::mat4 transform = glm::mat4{ 1.0f };
@@ -322,6 +339,9 @@ namespace four
 
             /// The total number of tetrahedra that are in this batch
             size_t number_of_tetrahedra = 0;
+
+            /// The total number of unique edges that are in this batch (i.e. for the 120-cell, this equals 1200)
+            size_t number_of_edges = 0;
         };
 
         // All drawable batches of 4D objects

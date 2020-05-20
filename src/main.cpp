@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <iostream>
+#include <map>
 
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
@@ -43,8 +44,10 @@ float rotation_zx = 0.0f;
 float rotation_xw = 0.0f;
 float rotation_yw = 0.0f;
 float rotation_zw = 0.0f;
+float clip_distance_w = 1.25f;
 bool display_wireframe = false;
-bool display_tetrahedra = false;
+const std::vector<std::string> modes = { "Slice", "Tetrahedra", "Edges" };
+std::string current_mode = modes[0];
 
 // Appearance settings
 ImVec4 clear_color = ImVec4(0.091f, 0.062f, 0.127f, 1.0f);
@@ -207,16 +210,6 @@ void message_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GL
     std::cout << src_str << ", " << type_str << ", " << severity_str << ", " << id << ": " << message << '\n';
 }
 
-glm::mat4 build_simple_rotation_matrix()
-{
-    return four::maths::get_simple_rotation_matrix(four::maths::Plane::XY, rotation_xy) *
-           four::maths::get_simple_rotation_matrix(four::maths::Plane::YZ, rotation_yz) *
-           four::maths::get_simple_rotation_matrix(four::maths::Plane::ZX, rotation_zx) *
-           four::maths::get_simple_rotation_matrix(four::maths::Plane::XW, rotation_xw) *
-           four::maths::get_simple_rotation_matrix(four::maths::Plane::YW, rotation_yw) *
-           four::maths::get_simple_rotation_matrix(four::maths::Plane::ZW, rotation_zw);
-}
-
 /**
  * Initialize GLFW and the OpenGL context.
  */
@@ -228,7 +221,7 @@ void initialize()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, false);
-    glfwWindowHint(GLFW_SAMPLES, 4);
+    glfwWindowHint(GLFW_SAMPLES, 8);
     window = glfwCreateWindow(window_w, window_h, "Polychora", nullptr, nullptr);
 
     if (window == nullptr)
@@ -264,8 +257,8 @@ void initialize()
     {
 #if defined(_DEBUG)
         // Debug logging
-        //glEnable(GL_DEBUG_OUTPUT);
-        //glDebugMessageCallback(message_callback, nullptr);
+        glEnable(GL_DEBUG_OUTPUT);
+        glDebugMessageCallback(message_callback, nullptr);
 #endif
         // Depth testing
         glEnable(GL_DEPTH_TEST);
@@ -277,6 +270,12 @@ void initialize()
         // Enable alpha blending
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        // Set the line width
+        glLineWidth(0.125f);
+
+        // Enable the first custom clipping plane
+        glEnable(GL_CLIP_DISTANCE0);
     }
 }
 
@@ -285,9 +284,20 @@ double round_nearest_tenth(double x)
     return floor(x * 10.0 + 0.5) / 10.0;
 }
 
-std::vector<four::Tetrahedra> run_qhull()
+glm::mat4 build_simple_rotation_matrix()
 {
-    std::vector<std::vector<four::combinatorics::PermutationSeed<float>>> all_permutation_seeds;// four::get_all_permutation_seeds();
+    return four::maths::get_simple_rotation_matrix(four::maths::Plane::XY, rotation_xy) *
+        four::maths::get_simple_rotation_matrix(four::maths::Plane::YZ, rotation_yz) *
+        four::maths::get_simple_rotation_matrix(four::maths::Plane::ZX, rotation_zx) *
+        four::maths::get_simple_rotation_matrix(four::maths::Plane::XW, rotation_xw) *
+        four::maths::get_simple_rotation_matrix(four::maths::Plane::YW, rotation_yw) *
+        four::maths::get_simple_rotation_matrix(four::maths::Plane::ZW, rotation_zw);
+}
+
+
+std::vector<four::Tetrahedra> run_qhull(bool find_edges = true)
+{
+    std::vector<std::vector<four::combinatorics::PermutationSeed<float>>> all_permutation_seeds = four::get_all_permutation_seeds();
     const float phi = (1.0f + sqrtf(5.0f)) / 2.0f;
     const float phi_1 = phi;
     const float phi_2 = powf(phi, 2.0f);
@@ -296,33 +306,45 @@ std::vector<four::Tetrahedra> run_qhull()
     const float phi_5 = powf(phi, 5.0f);
     const float phi_6 = powf(phi, 6.0f);
 
-
-    auto cell =
-        // 120-cell
-    {
-        // All
-        four::combinatorics::PermutationSeed<float>{ { 2.0f, 2.0f, 0.0f, 0.0f }, true, four::combinatorics::Parity::ALL },
-        four::combinatorics::PermutationSeed<float>{ { sqrtf(5.0f), 1.0f, 1.0f, 1.0f }, true, four::combinatorics::Parity::ALL },
-        four::combinatorics::PermutationSeed<float>{ { phi, phi, phi, powf(phi, -2.0f) }, true, four::combinatorics::Parity::ALL },
-        four::combinatorics::PermutationSeed<float>{ { powf(phi, 2.0f), powf(phi, -1.0f), powf(phi, -1.0f), powf(phi, -1.0f) }, true, four::combinatorics::Parity::ALL },
-
-        // Even
-        four::combinatorics::PermutationSeed<float>{ { powf(phi, 2.0f),  powf(phi, -2.0f), 1.0f, 0.0f }, true, four::combinatorics::Parity::EVEN },
-        four::combinatorics::PermutationSeed<float>{ { sqrtf(5.0f),  powf(phi, -1.0f), phi, 0.0f }, true, four::combinatorics::Parity::EVEN },
-        four::combinatorics::PermutationSeed<float>{ { 2.0f, 1.0f, phi, powf(phi, -1.0f) }, true, four::combinatorics::Parity::EVEN }
-    };
-
-    for (size_t i = 0; i < 1; i++)
-    {
-        all_permutation_seeds.push_back(cell);
-    }
+//    all_permutation_seeds =
+//    {
+//{
+//            // All
+//            four::combinatorics::PermutationSeed<float>{ {0, 0, 2 * phi_3, 4 * phi_2}, true, four::combinatorics::Parity::ALL },
+//            four::combinatorics::PermutationSeed<float>{ {1, 1, phi_3, 3 * phi_3}, true, four::combinatorics::Parity::ALL },
+//            four::combinatorics::PermutationSeed<float>{ {1, 1, 3 + 4 * phi_1, 3 + 4 * phi_1}, true, four::combinatorics::Parity::ALL },
+//            four::combinatorics::PermutationSeed<float>{ {2 * phi_1, 2 * phi_2, 2 * phi_3, 2 * phi_3}, true, four::combinatorics::Parity::ALL },
+//            four::combinatorics::PermutationSeed<float>{ {phi_3, phi_3, 1 + 4 * phi_1, 3 + 4 * phi_1}, true, four::combinatorics::Parity::ALL },
+//
+//            // Even
+//            four::combinatorics::PermutationSeed<float>{ {phi_1, 2 * phi_2, 3 + 4 * phi_1, 3 * phi_2}, true, four::combinatorics::Parity::EVEN },
+//            four::combinatorics::PermutationSeed<float>{ {phi_2, 2 * phi_1, 4 + 5 * phi_1, phi_3}, true, four::combinatorics::Parity::EVEN },
+//            four::combinatorics::PermutationSeed<float>{ {phi_2, 2 + phi_1, 3 + 4 * phi_1, 2 * phi_3}, true, four::combinatorics::Parity::EVEN },
+//            four::combinatorics::PermutationSeed<float>{ {phi_2, phi_3, 4 * phi_2, phi_4}, true, four::combinatorics::Parity::EVEN },
+//            four::combinatorics::PermutationSeed<float>{ {phi_2, phi_4, 1 + 4 * phi_1, 2 * phi_3}, true, four::combinatorics::Parity::EVEN },
+//            four::combinatorics::PermutationSeed<float>{ {2 * phi_1, 1 + 3 * phi_1, 3 + 4 * phi_1, phi_4}, true, four::combinatorics::Parity::EVEN },
+//            four::combinatorics::PermutationSeed<float>{ {2 + phi_1, phi_3, phi_5, 2 * phi_2}, true, four::combinatorics::Parity::EVEN },
+//            four::combinatorics::PermutationSeed<float>{ {phi_3, 2 * phi_2, 1 + 3 * phi_1, 2 + 5 * phi_1}, true, four::combinatorics::Parity::EVEN },
+//            four::combinatorics::PermutationSeed<float>{ {0, 1, 4 + 5 * phi_1, 1 + 3 * phi_1}, true, four::combinatorics::Parity::EVEN },
+//            four::combinatorics::PermutationSeed<float>{ {0, phi_1, phi_5, 1 + 4 * phi_1}, true, four::combinatorics::Parity::EVEN },
+//            four::combinatorics::PermutationSeed<float>{ {0, phi_2, 3 * phi_3, 2 + phi_1}, true, four::combinatorics::Parity::EVEN },
+//            four::combinatorics::PermutationSeed<float>{ {0, phi_3, 2 + 5 * phi_1, 3 * phi_2}, true, four::combinatorics::Parity::EVEN },
+//            four::combinatorics::PermutationSeed<float>{ {1, phi_2, 2 + 5 * phi_1, 2 * phi_3}, true, four::combinatorics::Parity::EVEN },
+//            four::combinatorics::PermutationSeed<float>{ {1, phi_2, 4 + 5 * phi_1, 2 * phi_2}, true, four::combinatorics::Parity::EVEN },
+//            four::combinatorics::PermutationSeed<float>{ {1, 2 * phi_1, phi_5, phi_4}, true, four::combinatorics::Parity::EVEN },
+//            four::combinatorics::PermutationSeed<float>{ {1, phi_4, 2 * phi_3, 3 * phi_2}, true, four::combinatorics::Parity::EVEN },
+//            four::combinatorics::PermutationSeed<float>{ {phi_1, phi_2, 2 * phi_1, 3 * phi_3}, true, four::combinatorics::Parity::EVEN },
+//        }
+//    };
 
     std::vector<four::Tetrahedra> tetrahedra_groups;
 
     for (const auto& seeds : all_permutation_seeds)
     {
+        std::cout << "Loading new 4D object..." << std::endl;
+
         auto permutations = four::combinatorics::generate<float>(seeds);
-        std::cout << permutations.size() << " permutations found" << std::endl;
+        std::cout << "\t" << permutations.size() << " permutations found" << std::endl;
 
         std::vector<double> coordinates;
         for (const auto& permutation : permutations)
@@ -341,13 +363,22 @@ std::vector<four::Tetrahedra> run_qhull()
         orgQhull::Qhull qhull;
 
         std::vector<glm::vec4> vertices;
-        std::vector<size_t> simplices;
+        std::vector<uint32_t> simplices;
+        std::vector<uint32_t> edges;
         std::vector<glm::vec4> normals;
 
         try {
             // Run QHull
-            std::cout << "Running convex hull algorithm on " << permutations.size() << " vertices" << std::endl;
-            qhull.runQhull("", 4, permutations.size(), coordinates.data(), "C0.001"); // Qt
+            const bool triangulate = true;
+            if (triangulate)
+            { 
+                qhull.runQhull("", 4, permutations.size(), coordinates.data(), "Qt"); 
+            }
+            else 
+            {
+                // Merge coplanar facets within an epsilon 
+                qhull.runQhull("", 4, permutations.size(), coordinates.data(), "C0.001"); 
+            }
 
             // Process unique points that form the convex hull
             for (const auto& point : qhull.points())
@@ -359,7 +390,7 @@ std::vector<four::Tetrahedra> run_qhull()
             }
 
             // Process unique facets that form the convex hull
-            std::cout << "Facet count: " << qhull.facetList().count() << std::endl;
+            std::cout << "\t" << "Facet count: " << qhull.facetList().count() << std::endl;
             for (auto& face : qhull.facetList())
             {
                 if (!face.isSimplicial())
@@ -384,32 +415,86 @@ std::vector<four::Tetrahedra> run_qhull()
                 }));
             }
 
-            std::cout << "Convex hull resulted in:" << std::endl;
-            std::cout << vertices.size() << " vertices" << std::endl;
-            std::cout << simplices.size() / 4 << " simplices" << std::endl;
-            std::cout << normals.size() << " hyperplane normals" << std::endl;
+            std::cout << "\t" << "Convex hull resulted in:" << std::endl;
+            std::cout << "\t - " << vertices.size() << " vertices" << std::endl;
+            std::cout << "\t - " << simplices.size() / 4 << " simplices" << std::endl;
+            std::cout << "\t - " << normals.size() << " hyperplane normals" << std::endl;
 
-            std::cout << "Finding smallest distance between any two vertices of the convex hull..." << std::endl;
-            float smallest = std::numeric_limits<float>::max();
-
-            for (size_t i = 0; i < vertices.size(); ++i)
+            if (find_edges)
             {
-                for (size_t j = 0; j < vertices.size(); ++j)
+                float smallest = std::numeric_limits<float>::max();
+
+                // Form a data structure that maps each vertex to a list containing the distance from that vertex 
+                // to each of the other vertices in the convex hull
+                std::map<size_t, std::vector<float>> vertex_id_to_neighbor_distances;
+
+                for (size_t i = 0; i < vertices.size(); ++i)
                 {
-                    if (i != j)
+                    vertex_id_to_neighbor_distances[i].reserve(vertices.size());
+
+                    for (size_t j = 0; j < vertices.size(); ++j)
                     {
                         const float distance = glm::distance(vertices[i], vertices[j]);
-                        if (distance < smallest)
+                        vertex_id_to_neighbor_distances[i].push_back(distance);
+
+                        if (i != j)
                         {
-                            smallest = distance;
+                            if (distance < smallest)
+                            {
+                                smallest = distance;
+                            }
                         }
                     }
                 }
+
+                std::cout << "\t" << "Smallest distance: " << smallest << std::endl;
+                std::map<uint32_t, std::vector<uint32_t>> vertex_id_to_neighbor_ids;
+
+                // How close the distance between a pair of vertices must be (compared to the minimum distance calculated above)
+                // in order to be considered a "true" edge
+                const float edge_threshold = 0.05f;
+
+                for (const auto& [id, neighbor_distances] : vertex_id_to_neighbor_distances)
+                {
+                    for (size_t neighbor_id = 0; neighbor_id < neighbor_distances.size(); ++neighbor_id)
+                    {
+                        if (id != neighbor_id && abs(neighbor_distances[neighbor_id] - smallest) <= edge_threshold)
+                        {
+                            // There exists an edge between `id` and `neighbor_id` 
+                            vertex_id_to_neighbor_ids[id].push_back(neighbor_id);
+                        }
+                    }
+                }
+
+                // Custom set compare lambda function to avoid duplicate edges, i.e. <0, 1> and <1, 0> should be considered the same
+                //
+                // Reference: https://stackoverflow.com/questions/51013008/how-to-add-distinct-pairs-into-a-set
+                auto compare = [](std::pair<uint32_t, uint32_t> lhs, std::pair<uint32_t, uint32_t> rhs) 
+                {
+                    if (lhs.first > lhs.second) lhs = std::pair<uint32_t, uint32_t>{ lhs.second, lhs.first };
+                    if (rhs.first > rhs.second) rhs = std::pair<uint32_t, uint32_t>{ rhs.second, rhs.first };
+                    return lhs < rhs;
+                };
+                std::set<std::pair<uint32_t, uint32_t>, decltype(compare)> unique_edges(compare);
+
+                // Insert all pairs of vertex IDs into the set: duplicates will be ignored, per the comparison operator above
+                for (const auto& [id, neighbor_ids] : vertex_id_to_neighbor_ids)
+                {
+                    for (const auto& neighbor_id : neighbor_ids)
+                    {
+                        unique_edges.insert({ id, neighbor_id });
+                    }
+                }
+                std::cout << "\t" << "Found " << unique_edges.size() << " total edges" << std::endl;
+
+                // Flatten the list of pairs into a list of ints
+                edges.reserve(unique_edges.size() * 2);
+                for (const auto& [a, b] : unique_edges)
+                {
+                    edges.push_back(a);
+                    edges.push_back(b);
+                }
             }
-
-            std::cout << "Smallest distance: " << smallest << std::endl;
-            std::cout << "Finding edges (brute force)..." << std::endl;
-
         }
         catch (std::exception e)
         {
@@ -419,6 +504,7 @@ std::vector<four::Tetrahedra> run_qhull()
         tetrahedra_groups.push_back({
             vertices,
             simplices,
+            edges,
             normals
         });
     }
@@ -449,10 +535,10 @@ int main()
 
     auto hyperplane = four::Hyperplane{ w_axis, 0.1f };
     auto camera = four::Camera{
-        x_axis * 2.0f, // From
-        origin, // To
-        y_axis, // Up
-        z_axis  // Over
+        x_axis  * 1.25f, // From: move "outside" of the polychora, all of which have unit radius
+        origin,          // To
+        y_axis,          // Up
+        z_axis           // Over
     };
 
     // Load the shader program that will project 4D -> 3D -> 2D
@@ -488,23 +574,18 @@ int main()
         {
             ImGui::Begin("Settings"); 
 
-            ImGui::ColorEdit3("clear color", (float*)&clear_color);
+            ImGui::ColorEdit3("Background Color", (float*)&clear_color);
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
             ImGui::Separator();
             ImGui::Text("Slicing and Rotations");
             ImGui::SliderInt("Polychoron", (int*)&polychoron_index, 0, renderer.get_number_of_objects() - 1);
-            if (ImGui::SliderFloat("Hyperplane Displacement", &hyperplane.displacement, -3.0f, 3.0f)) topology_needs_update = true;
-            if (roundf(hyperplane.get_displacement()) == hyperplane.get_displacement())
-            {
-                hyperplane.displacement += 0.001f;
-            }
-            if (ImGui::SliderFloat("Rotation XY", &rotation_xy, 0.0f, 2.0f * pi)) topology_needs_update = true;
-            if (ImGui::SliderFloat("Rotation YZ", &rotation_yz, 0.0f, 2.0f * pi)) topology_needs_update = true;
-            if (ImGui::SliderFloat("Rotation ZX", &rotation_zx, 0.0f, 2.0f * pi)) topology_needs_update = true;
-            if (ImGui::SliderFloat("Rotation XW", &rotation_xw, 0.0f, 2.0f * pi)) topology_needs_update = true;
-            if (ImGui::SliderFloat("Rotation YW", &rotation_yw, 0.0f, 2.0f * pi)) topology_needs_update = true;
-            if (ImGui::SliderFloat("Rotation ZW", &rotation_zw, 0.0f, 2.0f * pi)) topology_needs_update = true;
+            topology_needs_update |= ImGui::SliderFloat("Rotation XY", &rotation_xy, 0.0f, 2.0f * pi);
+            topology_needs_update |= ImGui::SliderFloat("Rotation YZ", &rotation_yz, 0.0f, 2.0f * pi);
+            topology_needs_update |= ImGui::SliderFloat("Rotation ZX", &rotation_zx, 0.0f, 2.0f * pi);
+            topology_needs_update |= ImGui::SliderFloat("Rotation XW", &rotation_xw, 0.0f, 2.0f * pi);
+            topology_needs_update |= ImGui::SliderFloat("Rotation YW", &rotation_yw, 0.0f, 2.0f * pi);
+            topology_needs_update |= ImGui::SliderFloat("Rotation ZW", &rotation_zw, 0.0f, 2.0f * pi);
             if (topology_needs_update)
             {
                 // Don't rebuild the rotation matrices unless we have to
@@ -513,10 +594,34 @@ int main()
                 
                 renderer.set_transforms(simple_rotation_matrix);
             }
-
-            ImGui::Checkbox("Display Tetrahedra", &display_tetrahedra);
-            if (!display_tetrahedra)
+            ImGui::SliderFloat("Clip Distance W", &clip_distance_w, 0.0f, 1.25f);
+            ImGui::Separator();
+            if (ImGui::BeginCombo("Display Mode", current_mode.c_str()))
             {
+                for (size_t i = 0; i < modes.size(); ++i)
+                {
+                    bool is_selected = current_mode.c_str() == modes[i];
+                    if (ImGui::Selectable(modes[i].c_str(), is_selected))
+                    {
+                        current_mode = modes[i];
+                        topology_needs_update = true;
+                    }
+                    if (is_selected)
+                    {
+                        ImGui::SetItemDefaultFocus();
+                    }
+                }
+                ImGui::EndCombo();
+            }
+            if (current_mode == "Slice")
+            {
+                ImGui::Separator();
+                topology_needs_update |= ImGui::SliderFloat("Hyperplane Displacement", &hyperplane.displacement, -3.0f, 3.0f);
+                if (roundf(hyperplane.get_displacement()) == hyperplane.get_displacement())
+                {
+                    hyperplane.displacement += 0.001f;
+                }
+
                 ImGui::Checkbox("Display Wireframe", &display_wireframe);
             }
 
@@ -550,23 +655,27 @@ int main()
             //}
             const auto projection = glm::perspective(glm::radians(zoom), static_cast<float>(window_w) / static_cast<float>(window_h), 0.1f, 1000.0f);
 
-            if (display_tetrahedra)
+            if (current_mode == "Tetrahedra" || current_mode == "Edges")
             {
-                for (size_t i = 0; i < renderer.get_number_of_objects(); i++)
+                //for (size_t i = 0; i < renderer.get_number_of_objects(); i++)
                 {
+                    shader_projections.uniform_float("u_clip_distance_w", clip_distance_w);
                     shader_projections.uniform_mat4("u_three_model", arcball_model_matrix);
                     shader_projections.uniform_mat4("u_three_projection", projection);
-                    shader_projections.uniform_vec4("u_four_model_translation", renderer.get_translation(i));
-                    shader_projections.uniform_mat4("u_four_model_orientation", renderer.get_transform(i));
+                    shader_projections.uniform_vec4("u_four_model_translation", renderer.get_translation(polychoron_index));
+                    shader_projections.uniform_mat4("u_four_model_orientation", renderer.get_transform(polychoron_index));
                     shader_projections.uniform_bool("u_perspective_4D", true);
-                    renderer.draw_tetrahedra_object(i);
+                    renderer.draw_skeleton_object(polychoron_index, current_mode == "Tetrahedra");
                 }
             }
             else
             {
-                for (size_t i = 0; i < renderer.get_number_of_objects(); i++)
+                if (topology_needs_update)
                 {
-                    renderer.slice_object(i, hyperplane);
+                    for (size_t i = 0; i < renderer.get_number_of_objects(); i++)
+                    {
+                        renderer.slice_object(i, hyperplane);
+                    }
                 }
 
                 if (display_wireframe)
@@ -579,11 +688,11 @@ int main()
                 }
 
                 shader_projections.use();
+                shader_projections.uniform_float("u_clip_distance_w", clip_distance_w);
                 shader_projections.uniform_mat4("u_three_model", arcball_model_matrix);
                 shader_projections.uniform_mat4("u_three_projection", projection);
                 shader_projections.uniform_bool("u_perspective_4D", false);
-                renderer.draw_sliced_objects();
-                // OR: renderer.draw_sliced_object(polychoron_index);
+                renderer.draw_sliced_object(polychoron_index);
             }
         }
 

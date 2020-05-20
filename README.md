@@ -98,6 +98,10 @@ cmake ..
 
 ## To Use
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/mwalczyk/polychora/master/screenshots/cantellated_120_cell_skeleton.gif" alt="screenshot" width="500" height="auto"/>
+</p>
+
 `polychora` currently supports 5 regular polychora - 8-cell, 16-cell, 24-cell, 120-cell, 600-cell - as well as several uniform polychora.
 
 To rotate the camera around the object in 3-space, press + drag the left mouse button. You can zoom the camera in or out using the scroll wheel.
