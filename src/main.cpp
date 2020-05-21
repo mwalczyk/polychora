@@ -299,10 +299,6 @@ std::vector<four::Tetrahedra> run_qhull(bool find_edges = true)
 {
     std::vector<std::vector<four::combinatorics::PermutationSeed<float>>> all_permutation_seeds = four::get_all_permutation_seeds();
 
-    all_permutation_seeds.pop_back();
-    all_permutation_seeds.pop_back();
-    all_permutation_seeds.pop_back();
-
     std::vector<four::Tetrahedra> tetrahedra_groups;
 
     for (const auto& seeds : all_permutation_seeds)
@@ -425,7 +421,7 @@ std::vector<four::Tetrahedra> run_qhull(bool find_edges = true)
 
                 // How close the distance between a pair of vertices must be (compared to the minimum distance calculated above)
                 // in order to be considered a "true" edge
-                const float edge_threshold = 0.005f;
+                const float edge_threshold = 0.065f;
 
                 for (const auto& [id, neighbor_distances] : vertex_id_to_neighbor_distances)
                 {
