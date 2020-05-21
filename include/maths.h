@@ -159,7 +159,7 @@ namespace four
 		/// Reference: `https://math.stackexchange.com/questions/978642/how-to-sort-vertices-of-a-polygon-in-counter-clockwise-order`
 		std::vector<glm::vec4> sort_points_on_plane(const std::vector<glm::vec4>& points, const Hyperplane& hyperplane)
 		{
-            size_t largest_index = utils::index_of_largest(hyperplane.get_normal());
+            size_t largest_index = utils::index_of_largest(hyperplane.normal);
 
             // First, project the 4D points to 3D. We do this by dropping the coordinate
             // corresponding to the largest value of the hyperplane's normal vector.

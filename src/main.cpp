@@ -298,44 +298,10 @@ glm::mat4 build_simple_rotation_matrix()
 std::vector<four::Tetrahedra> run_qhull(bool find_edges = true)
 {
     std::vector<std::vector<four::combinatorics::PermutationSeed<float>>> all_permutation_seeds = four::get_all_permutation_seeds();
-    const float phi = (1.0f + sqrtf(5.0f)) / 2.0f;
-    const float phi_1 = phi;
-    const float phi_2 = powf(phi, 2.0f);
-    const float phi_3 = powf(phi, 3.0f);
-    const float phi_4 = powf(phi, 4.0f);
-    const float phi_5 = powf(phi, 5.0f);
-    const float phi_6 = powf(phi, 6.0f);
 
-//    all_permutation_seeds =
-//    {
-//{
-//            // All
-//            four::combinatorics::PermutationSeed<float>{ {0, 0, 2 * phi_3, 4 * phi_2}, true, four::combinatorics::Parity::ALL },
-//            four::combinatorics::PermutationSeed<float>{ {1, 1, phi_3, 3 * phi_3}, true, four::combinatorics::Parity::ALL },
-//            four::combinatorics::PermutationSeed<float>{ {1, 1, 3 + 4 * phi_1, 3 + 4 * phi_1}, true, four::combinatorics::Parity::ALL },
-//            four::combinatorics::PermutationSeed<float>{ {2 * phi_1, 2 * phi_2, 2 * phi_3, 2 * phi_3}, true, four::combinatorics::Parity::ALL },
-//            four::combinatorics::PermutationSeed<float>{ {phi_3, phi_3, 1 + 4 * phi_1, 3 + 4 * phi_1}, true, four::combinatorics::Parity::ALL },
-//
-//            // Even
-//            four::combinatorics::PermutationSeed<float>{ {phi_1, 2 * phi_2, 3 + 4 * phi_1, 3 * phi_2}, true, four::combinatorics::Parity::EVEN },
-//            four::combinatorics::PermutationSeed<float>{ {phi_2, 2 * phi_1, 4 + 5 * phi_1, phi_3}, true, four::combinatorics::Parity::EVEN },
-//            four::combinatorics::PermutationSeed<float>{ {phi_2, 2 + phi_1, 3 + 4 * phi_1, 2 * phi_3}, true, four::combinatorics::Parity::EVEN },
-//            four::combinatorics::PermutationSeed<float>{ {phi_2, phi_3, 4 * phi_2, phi_4}, true, four::combinatorics::Parity::EVEN },
-//            four::combinatorics::PermutationSeed<float>{ {phi_2, phi_4, 1 + 4 * phi_1, 2 * phi_3}, true, four::combinatorics::Parity::EVEN },
-//            four::combinatorics::PermutationSeed<float>{ {2 * phi_1, 1 + 3 * phi_1, 3 + 4 * phi_1, phi_4}, true, four::combinatorics::Parity::EVEN },
-//            four::combinatorics::PermutationSeed<float>{ {2 + phi_1, phi_3, phi_5, 2 * phi_2}, true, four::combinatorics::Parity::EVEN },
-//            four::combinatorics::PermutationSeed<float>{ {phi_3, 2 * phi_2, 1 + 3 * phi_1, 2 + 5 * phi_1}, true, four::combinatorics::Parity::EVEN },
-//            four::combinatorics::PermutationSeed<float>{ {0, 1, 4 + 5 * phi_1, 1 + 3 * phi_1}, true, four::combinatorics::Parity::EVEN },
-//            four::combinatorics::PermutationSeed<float>{ {0, phi_1, phi_5, 1 + 4 * phi_1}, true, four::combinatorics::Parity::EVEN },
-//            four::combinatorics::PermutationSeed<float>{ {0, phi_2, 3 * phi_3, 2 + phi_1}, true, four::combinatorics::Parity::EVEN },
-//            four::combinatorics::PermutationSeed<float>{ {0, phi_3, 2 + 5 * phi_1, 3 * phi_2}, true, four::combinatorics::Parity::EVEN },
-//            four::combinatorics::PermutationSeed<float>{ {1, phi_2, 2 + 5 * phi_1, 2 * phi_3}, true, four::combinatorics::Parity::EVEN },
-//            four::combinatorics::PermutationSeed<float>{ {1, phi_2, 4 + 5 * phi_1, 2 * phi_2}, true, four::combinatorics::Parity::EVEN },
-//            four::combinatorics::PermutationSeed<float>{ {1, 2 * phi_1, phi_5, phi_4}, true, four::combinatorics::Parity::EVEN },
-//            four::combinatorics::PermutationSeed<float>{ {1, phi_4, 2 * phi_3, 3 * phi_2}, true, four::combinatorics::Parity::EVEN },
-//            four::combinatorics::PermutationSeed<float>{ {phi_1, phi_2, 2 * phi_1, 3 * phi_3}, true, four::combinatorics::Parity::EVEN },
-//        }
-//    };
+    all_permutation_seeds.pop_back();
+    all_permutation_seeds.pop_back();
+    all_permutation_seeds.pop_back();
 
     std::vector<four::Tetrahedra> tetrahedra_groups;
 
@@ -423,6 +389,7 @@ std::vector<four::Tetrahedra> run_qhull(bool find_edges = true)
             if (find_edges)
             {
                 float smallest = std::numeric_limits<float>::max();
+                float largest = std::numeric_limits<float>::min();
 
                 // Form a data structure that maps each vertex to a list containing the distance from that vertex 
                 // to each of the other vertices in the convex hull
@@ -443,16 +410,22 @@ std::vector<four::Tetrahedra> run_qhull(bool find_edges = true)
                             {
                                 smallest = distance;
                             }
+                            if (distance > largest)
+                            {
+                                largest = distance;
+                            }
                         }
                     }
                 }
 
                 std::cout << "\t" << "Smallest distance: " << smallest << std::endl;
+                std::cout << "\t" << "Largest distance: " << largest << std::endl;
+                std::cout << "\t" << "Ratio (smallest to largest): " << smallest / largest << std::endl;
                 std::map<uint32_t, std::vector<uint32_t>> vertex_id_to_neighbor_ids;
 
                 // How close the distance between a pair of vertices must be (compared to the minimum distance calculated above)
                 // in order to be considered a "true" edge
-                const float edge_threshold = 0.05f;
+                const float edge_threshold = 0.005f;
 
                 for (const auto& [id, neighbor_distances] : vertex_id_to_neighbor_distances)
                 {
@@ -544,13 +517,14 @@ int main()
     // Load the shader program that will project 4D -> 3D -> 2D
     auto shader_projections = graphics::Shader{ "../shaders/projections.vert", "../shaders/projections.frag" };
 
+    // Perform the intial slicing
     glm::mat4 simple_rotation_matrix = build_simple_rotation_matrix();
     renderer.slice_objects(hyperplane);
 
     // Uniforms for 4D -> 3D projection.
     shader_projections.use();
     shader_projections.uniform_vec4("u_four_from", camera.get_from());
-    shader_projections.uniform_mat4("u_four_model", simple_rotation_matrix); // Rotation matrix in 4D
+    shader_projections.uniform_mat4("u_four_model", simple_rotation_matrix); 
     shader_projections.uniform_mat4("u_four_view", camera.look_at());
     shader_projections.uniform_mat4("u_four_projection", camera.projection());
 
@@ -573,28 +547,25 @@ int main()
         // Draw the UI elements (buttons, sliders, etc.)
         {
             ImGui::Begin("Settings"); 
-
             ImGui::ColorEdit3("Background Color", (float*)&clear_color);
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-
+            ImGui::Text("Application Average %.3f MS/Frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::Separator();
-            ImGui::Text("Slicing and Rotations");
-            ImGui::SliderInt("Polychoron", (int*)&polychoron_index, 0, renderer.get_number_of_objects() - 1);
-            topology_needs_update |= ImGui::SliderFloat("Rotation XY", &rotation_xy, 0.0f, 2.0f * pi);
-            topology_needs_update |= ImGui::SliderFloat("Rotation YZ", &rotation_yz, 0.0f, 2.0f * pi);
-            topology_needs_update |= ImGui::SliderFloat("Rotation ZX", &rotation_zx, 0.0f, 2.0f * pi);
-            topology_needs_update |= ImGui::SliderFloat("Rotation XW", &rotation_xw, 0.0f, 2.0f * pi);
-            topology_needs_update |= ImGui::SliderFloat("Rotation YW", &rotation_yw, 0.0f, 2.0f * pi);
-            topology_needs_update |= ImGui::SliderFloat("Rotation ZW", &rotation_zw, 0.0f, 2.0f * pi);
+            ImGui::SliderInt("Polychoron Index", (int*)&polychoron_index, 0, renderer.get_number_of_objects() - 1);
+            ImGui::Text("Planar Rotations (in 4-Space)");
+            topology_needs_update |= ImGui::SliderFloat("XY", &rotation_xy, 0.0f, 2.0f * pi);
+            topology_needs_update |= ImGui::SliderFloat("YZ", &rotation_yz, 0.0f, 2.0f * pi);
+            topology_needs_update |= ImGui::SliderFloat("ZX", &rotation_zx, 0.0f, 2.0f * pi);
+            topology_needs_update |= ImGui::SliderFloat("XW", &rotation_xw, 0.0f, 2.0f * pi);
+            topology_needs_update |= ImGui::SliderFloat("YW", &rotation_yw, 0.0f, 2.0f * pi);
+            topology_needs_update |= ImGui::SliderFloat("ZW", &rotation_zw, 0.0f, 2.0f * pi);
             if (topology_needs_update)
             {
                 // Don't rebuild the rotation matrices unless we have to
                 simple_rotation_matrix = build_simple_rotation_matrix();
-                shader_projections.uniform_mat4("u_four_model_orientation", simple_rotation_matrix);
                 
+                // All 4D objects receive the same 4-space rotation matrix                 
                 renderer.set_transforms(simple_rotation_matrix);
             }
-            ImGui::SliderFloat("Clip Distance W", &clip_distance_w, 0.0f, 1.25f);
             ImGui::Separator();
             if (ImGui::BeginCombo("Display Mode", current_mode.c_str()))
             {
@@ -616,15 +587,19 @@ int main()
             if (current_mode == "Slice")
             {
                 ImGui::Separator();
-                topology_needs_update |= ImGui::SliderFloat("Hyperplane Displacement", &hyperplane.displacement, -3.0f, 3.0f);
-                if (roundf(hyperplane.get_displacement()) == hyperplane.get_displacement())
+                topology_needs_update |= ImGui::SliderFloat("Hyperplane Displacement", &hyperplane.displacement, -2.0f, 2.0f);
+                if (roundf(hyperplane.displacement) == hyperplane.displacement)
                 {
+                    // TODO: when the displacement is exactly 0, 1, 2, etc. it causes issues?
                     hyperplane.displacement += 0.001f;
                 }
 
                 ImGui::Checkbox("Display Wireframe", &display_wireframe);
             }
-
+            else
+            {
+                ImGui::SliderFloat("Clip Distance W", &clip_distance_w, -1.25f, 1.25f);
+            }
             ImGui::End();
         }
         ImGui::Render();
@@ -635,38 +610,19 @@ int main()
 
         // Draw the 4D objects
         {
-            //if (topology_needs_update)
-            //for (size_t i = 0; i < renderer.get_number_of_objects(); i++)
-            //{
-            //    float pct = i / ((float)renderer.get_number_of_objects() + 1.0f);
-
-            //    glm::vec4 translation = {
-            //        (i / static_cast<float>(renderer.get_number_of_objects() - 1.0f)) * renderer.get_number_of_objects() - renderer.get_number_of_objects() * 0.5f,
-            //        0,
-            //        0.0,
-            //        sinf(glfwGetTime() * 1.5f + 2.0f * pi * pct) * 0.5f + 0.5f
-            //    };
-            //    translation.w *= 0.35f;
-
-            //    auto rotation1 = four::maths::get_simple_rotation_matrix(four::maths::Plane::XW, cosf(glfwGetTime() + i / ((float)renderer.get_number_of_objects() + 1.0f)));
-            //    auto rotation2 = four::maths::get_simple_rotation_matrix(four::maths::Plane::ZW, sinf(glfwGetTime() + i / ((float)renderer.get_number_of_objects() + 1.0f)));
-            //    renderer.set_transform(i,  glm::mat4{ 0.5f }, translation);
-            //    renderer.slice_object(i, hyperplane);
-            //}
-            const auto projection = glm::perspective(glm::radians(zoom), static_cast<float>(window_w) / static_cast<float>(window_h), 0.1f, 1000.0f);
+            const auto three_projection = glm::perspective(glm::radians(zoom), static_cast<float>(window_w) / static_cast<float>(window_h), 0.1f, 1000.0f);
 
             if (current_mode == "Tetrahedra" || current_mode == "Edges")
             {
-                //for (size_t i = 0; i < renderer.get_number_of_objects(); i++)
-                {
-                    shader_projections.uniform_float("u_clip_distance_w", clip_distance_w);
-                    shader_projections.uniform_mat4("u_three_model", arcball_model_matrix);
-                    shader_projections.uniform_mat4("u_three_projection", projection);
-                    shader_projections.uniform_vec4("u_four_model_translation", renderer.get_translation(polychoron_index));
-                    shader_projections.uniform_mat4("u_four_model_orientation", renderer.get_transform(polychoron_index));
-                    shader_projections.uniform_bool("u_perspective_4D", true);
-                    renderer.draw_skeleton_object(polychoron_index, current_mode == "Tetrahedra");
-                }
+                shader_projections.uniform_float("u_clip_distance_w", clip_distance_w);
+                shader_projections.uniform_mat4("u_three_model", arcball_model_matrix);
+                shader_projections.uniform_mat4("u_three_projection", three_projection);
+                shader_projections.uniform_vec4("u_four_model_translation", renderer.get_translation(polychoron_index));
+                shader_projections.uniform_mat4("u_four_model_orientation", renderer.get_transform(polychoron_index));
+                shader_projections.uniform_bool("u_perspective_4D", true);
+
+                // Draw either the edges of the polychoron or the wireframe outline of its tetrahedral decomposition
+                renderer.draw_skeleton_object(polychoron_index, current_mode == "Tetrahedra");
             }
             else
             {
@@ -687,10 +643,15 @@ int main()
                     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
                 }
 
+                // Note that we don't need to supply any of the "four" matrices here, since the slices will already
+                // have the rotations + translations applied to them in the compute shader, and the subsequent
+                // projection from 4D -> 3D is orthographic  
+                // ...
+
                 shader_projections.use();
                 shader_projections.uniform_float("u_clip_distance_w", clip_distance_w);
                 shader_projections.uniform_mat4("u_three_model", arcball_model_matrix);
-                shader_projections.uniform_mat4("u_three_projection", projection);
+                shader_projections.uniform_mat4("u_three_projection", three_projection);
                 shader_projections.uniform_bool("u_perspective_4D", false);
                 renderer.draw_sliced_object(polychoron_index);
             }

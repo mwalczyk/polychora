@@ -6,86 +6,15 @@
 namespace four
 {
 
-    /// A struct that describes a regular polychoron (4-polytope).
-    ///
-    /// See: `https://en.wikipedia.org/wiki/4-polytope`
-    struct Definition
-    {
-        /// The number of components (i.e. x, y, z, w, ...) per vertex: this should always be 4
-        uint32_t components_per_vertex;
-
-        /// The number of vertices per edge: this should always be 2
-        uint32_t vertices_per_edge;
-
-        /// The number of vertices per face, i.e. 3 for a polychoron with cells made up of triangular faces
-        uint32_t vertices_per_face;
-
-        /// The number of vertices per cell, i.e. 4 for a polychoron made up of tetrahedral cells (like the 16-cell)
-        uint32_t vertices_per_cell;
-
-        /// The number of faces per cell, i.e. 8 for a polychoron made up of cube cells (like the 8-cell "tesseract")
-        uint32_t faces_per_cell;
-
-        /// The number of cells, i.e. 8 for the 8-cell
-        uint32_t cells;
-    };
-
-    /// A polychoron is a polytope that exists in 4-dimensions. It is the 4-dimensional
-    /// analog of a polyhedron. It is made up of vertices, edges, faces, and cells. Each
-    /// cell is itself a polyhedra.
-    ///
-    /// Shape files are (largely) from Paul Bourke's website (see this project's `README`).
-    /// They are formatted as follows:
-    ///
-    /// ```
-    /// number_of_vertices
-    /// x0 y0 z0 w0
-    /// x1 y1 z1 w1
-    /// ...
-    ///
-    /// number_of_edges
-    /// v0 v1
-    /// v2 v3
-    /// ...
-    ///
-    /// number_of_faces
-    /// v0 v1 v2 v3
-    /// v4 v5 v6 v7
-    /// ...
-    ///
-    /// ```
-    ///
-    /// Reference: `http://paulbourke.net/geometry/hyperspace/`
-    enum class Polychoron
-    {
-        /// A polytope with 8 cubic cells: the "tesseract"
-        Cell8,
-
-        /// A polytope with 16 tetrahedral cells
-        Cell16,
-
-        /// A polytope with 24 octahedral cells
-        Cell24,
-
-        /// Another construction of the `Cell24` via the rectification of the `Cell16`: this is only
-        /// used to calculate the H-representation of the "regular" `Cell24` (even though the 24-cell
-        /// is self-dual, a rotation needs to happen before its vertices can be used as cell centers
-        /// to find hyperplane boundaries)
-        Cell24Rectified,
-
-        /// A polytope with 120 dodecahedral cells
-        Cell120,
-
-        /// A polytope with 600 tetrahedral cells
-        Cell600,
-    };
-
+    /// This is currently the only function that is being used in this header file. Here, we generate all of the "permutation seeds"
+    /// required to build a library of polychora.
     std::vector<std::vector<combinatorics::PermutationSeed<float>>> get_all_permutation_seeds()
     {
         // The Golden Ration (and powers of)
         const float phi = (1.0f + sqrtf(5.0f)) / 2.0f;
-
-        const float phi_1 = phi;
+        const float phi_n2 = powf(phi, -2.0f);
+        const float phi_n1 = powf(phi, -1.0f);
+        const float phi_1 = powf(phi, 1.0f);
         const float phi_2 = powf(phi, 2.0f);
         const float phi_3 = powf(phi, 3.0f);
         const float phi_4 = powf(phi, 4.0f);
@@ -117,13 +46,13 @@ namespace four
                 // All
                 four::combinatorics::PermutationSeed<float>{ { 2.0f, 2.0f, 0.0f, 0.0f }, true, four::combinatorics::Parity::ALL },
                 four::combinatorics::PermutationSeed<float>{ { sqrtf(5.0f), 1.0f, 1.0f, 1.0f }, true, four::combinatorics::Parity::ALL },
-                four::combinatorics::PermutationSeed<float>{ { phi, phi, phi, powf(phi, -2.0f) }, true, four::combinatorics::Parity::ALL },
-                four::combinatorics::PermutationSeed<float>{ { powf(phi, 2.0f), powf(phi, -1.0f), powf(phi, -1.0f), powf(phi, -1.0f) }, true, four::combinatorics::Parity::ALL },
+                four::combinatorics::PermutationSeed<float>{ { phi, phi, phi, phi_n2 }, true, four::combinatorics::Parity::ALL },
+                four::combinatorics::PermutationSeed<float>{ { powf(phi, 2.0f), phi_n1, phi_n1, phi_n1 }, true, four::combinatorics::Parity::ALL },
 
                 // Even
-                four::combinatorics::PermutationSeed<float>{ { powf(phi, 2.0f),  powf(phi, -2.0f), 1.0f, 0.0f }, true, four::combinatorics::Parity::EVEN },
-                four::combinatorics::PermutationSeed<float>{ { sqrtf(5.0f),  powf(phi, -1.0f), phi, 0.0f }, true, four::combinatorics::Parity::EVEN },
-                four::combinatorics::PermutationSeed<float>{ { 2.0f, 1.0f, phi, powf(phi, -1.0f) }, true, four::combinatorics::Parity::EVEN }
+                four::combinatorics::PermutationSeed<float>{ { phi_2,  phi_n2, 1.0f, 0.0f }, true, four::combinatorics::Parity::EVEN },
+                four::combinatorics::PermutationSeed<float>{ { sqrtf(5.0f), phi_n1, phi, 0.0f }, true, four::combinatorics::Parity::EVEN },
+                four::combinatorics::PermutationSeed<float>{ { 2.0f, 1.0f, phi, phi_n1 }, true, four::combinatorics::Parity::EVEN }
             },
 
             // 600-cell
@@ -133,7 +62,7 @@ namespace four
                 four::combinatorics::PermutationSeed<float>{ { 2.0f, 0.0f, 0.0f, 0.0f }, true, four::combinatorics::Parity::ALL },
 
                 // Even
-                four::combinatorics::PermutationSeed<float>{ { phi, 1.0f, powf(phi, -1.0f), 0.0f }, true, four::combinatorics::Parity::EVEN },
+                four::combinatorics::PermutationSeed<float>{ { phi, 1.0f, phi_n1, 0.0f }, true, four::combinatorics::Parity::EVEN },
             },
 
             // Bitruncated 8-cell
@@ -291,6 +220,57 @@ namespace four
         };
     }
 
+    /// A struct that describes a regular polychoron (4-polytope).
+    ///
+    /// See: https://en.wikipedia.org/wiki/4-polytope
+    struct Definition
+    {
+        /// The number of components (i.e. x, y, z, w, ...) per vertex: this should always be 4
+        uint32_t components_per_vertex;
+
+        /// The number of vertices per edge: this should always be 2
+        uint32_t vertices_per_edge;
+
+        /// The number of vertices per face, i.e. 3 for a polychoron with cells made up of triangular faces
+        uint32_t vertices_per_face;
+
+        /// The number of vertices per cell, i.e. 4 for a polychoron made up of tetrahedral cells (like the 16-cell)
+        uint32_t vertices_per_cell;
+
+        /// The number of faces per cell, i.e. 8 for a polychoron made up of cube cells (like the 8-cell "tesseract")
+        uint32_t faces_per_cell;
+
+        /// The number of cells, i.e. 8 for the 8-cell
+        uint32_t cells;
+    };
+
+    /// A polychoron is a polytope that exists in 4-dimensions. It is the 4-dimensional
+    /// analog of a polyhedron. It is made up of vertices, edges, faces, and cells. Each
+    /// cell is itself a polyhedra.
+    enum class Polychoron
+    {
+        /// A polytope with 8 cubic cells: the "tesseract"
+        Cell8,
+
+        /// A polytope with 16 tetrahedral cells
+        Cell16,
+
+        /// A polytope with 24 octahedral cells
+        Cell24,
+
+        /// Another construction of the `Cell24` via the rectification of the `Cell16`: this is only
+        /// used to calculate the H-representation of the "regular" `Cell24` (even though the 24-cell
+        /// is self-dual, a rotation needs to happen before its vertices can be used as cell centers
+        /// to find hyperplane boundaries)
+        Cell24Rectified,
+
+        /// A polytope with 120 dodecahedral cells
+        Cell120,
+
+        /// A polytope with 600 tetrahedral cells
+        Cell600,
+    };
+
     /// Returns the dual of the regular polychoron, which is itself another regular
     /// polychoron with a vertex at the center of each cell of the original polychoron.
     /// A polychoron is self-dual if it is its own dual (such as the 24-cell).
@@ -301,7 +281,7 @@ namespace four
         case Polychoron::Cell8: return Polychoron::Cell16;
         case Polychoron::Cell16: return Polychoron::Cell8;
         case Polychoron::Cell24: return Polychoron::Cell24Rectified;
-        case Polychoron::Cell24Rectified: return Polychoron::Cell24; // See: `http://eusebeia.dyndns.org/4d/24-cell`
+        case Polychoron::Cell24Rectified: return Polychoron::Cell24; // See: http://eusebeia.dyndns.org/4d/24-cell
         case Polychoron::Cell120: return Polychoron::Cell600;
         case Polychoron::Cell600: return Polychoron::Cell120;
         }
@@ -358,9 +338,6 @@ namespace four
                 4,
                 600
             };
-
-        default:
-            break;
         }
     }
 
@@ -1186,8 +1163,6 @@ namespace four
                 glm::vec4(0.5, -0.5, -0.5, -0.5),
                 glm::vec4(-0.5, -0.5, -0.5, -0.5),
             };
-        default:
-            break;
         }
     }
 
@@ -1889,6 +1864,8 @@ namespace four
         }
     }
 
+    /// Returns the H-representation (hyperplane representation) of this polychoron, i.e. a list
+    /// of bounding hyperplanes.
     std::vector<Hyperplane> get_h_representation(Polychoron polychoron)
     {
         // By definition, a polychoron's dual has a vertex at the center of each of the
@@ -1952,6 +1929,8 @@ namespace four
         return bounding_hyperplanes;
     }
 
+    /// Returns the V-representation (vertex representation)  of this polychoron, i.e. a list of 
+    /// all of its vertices.
     std::vector<glm::vec4> get_v_representation(Polychoron polychoron)
     {
         return get_vertices(polychoron);

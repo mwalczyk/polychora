@@ -68,8 +68,6 @@ namespace four
 
                 // Next, push back all of this tetrahedron's colors (currently, we are
                 // using the cell centroid to generate some sort of shading / colors)
-                //
-                // TODO: see notes on attribute divisors in `init_render_objects(...)`
                 for (size_t i = 0; i < max_vertices_per_slice; ++i)
                 {
                     tetrahedra_colors.push_back(tetrahedra.normals[simplex_index]);
@@ -123,8 +121,8 @@ namespace four
                 glGetProgramiv(compute.get_handle(), GL_COMPUTE_WORK_GROUP_SIZE, local_size.data());
             }
 
+            // Compute the indices required to render a wireframe of all of this polychoron's tetrahedra
             std::vector<uint32_t> tetrahedra_indices;
-
             for (size_t simplex_index = 0; simplex_index < tetrahedra.simplices.size() / 4; ++simplex_index)
             {
                 // Grab the vertex IDs of this simplex
@@ -154,18 +152,17 @@ namespace four
             }
 
             {
-                // Create the vertex array object
                 glCreateVertexArrays(1, &batch.vao_skeleton);
 
-                // The indices that will be used to draw the wireframes of all of the tetrahedra that make up this mesh
+                // The indices that will be used to draw the wireframes of all of the tetrahedra that make up this polychoron
                 glCreateBuffers(1, &batch.ebo_tetrahedra);
                 glNamedBufferData(batch.ebo_tetrahedra, tetrahedra_indices.size() * sizeof(uint32_t), tetrahedra_indices.data(), GL_STATIC_DRAW);
 
-                // The indices that will be used to draw the "skeleton" (i.e. unique edges) of the mesh
+                // The indices that will be used to draw the "skeleton" (i.e. unique edges) of this polychoron
                 glCreateBuffers(1, &batch.ebo_edges);
                 glNamedBufferData(batch.ebo_edges, tetrahedra.edges.size() * sizeof(uint32_t), tetrahedra.edges.data(), GL_STATIC_DRAW);
             
-                // The buffer containing all of the unique vertices of the mesh
+                // The buffer containing all of the unique vertices of this polychoron
                 glCreateBuffers(1, &batch.buffer_vertices);
                 glNamedBufferData(batch.buffer_vertices, tetrahedra.vertices.size() * sizeof(glm::vec4), tetrahedra.vertices.data(), GL_STATIC_DRAW);
 
@@ -193,8 +190,8 @@ namespace four
         {
             compute.use();
 
-            compute.uniform_vec4("u_hyperplane_normal", hyperplane.get_normal());
-            compute.uniform_float("u_hyperplane_displacement", hyperplane.get_displacement());
+            compute.uniform_vec4("u_hyperplane_normal", hyperplane.normal);
+            compute.uniform_float("u_hyperplane_displacement", hyperplane.displacement);
             compute.uniform_mat4("u_transform", batches[index].transform);
             compute.uniform_vec4("u_translation", batches[index].translation);
             compute.uniform_int("u_object_index", index);

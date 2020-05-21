@@ -35,9 +35,9 @@ namespace four
 			std::cout << std::endl;
 		}
 
-		// Find all unique subsets of the given set
-		//
-		// Reference: https://stackoverflow.com/questions/728972/finding-all-the-subsets-of-a-set
+		/// Find all unique subsets of the given set
+		///
+		/// Reference: https://stackoverflow.com/questions/728972/finding-all-the-subsets-of-a-set
 		template<typename T>
 		std::vector<std::vector<T>> powerset(const std::vector<T>& set)
 		{
@@ -91,7 +91,7 @@ namespace four
 			return subsets;
 		}
 
-		/// Reference: `https://www.geeksforgeeks.org/all-permutations-of-an-array-using-stl-in-c/`
+		/// Reference: https://www.geeksforgeeks.org/all-permutations-of-an-array-using-stl-in-c/
 		template<class T>
 		std::vector<std::vector<T>> find_all_permutations(std::vector<T> values, Parity parity = Parity::ALL)
 		{

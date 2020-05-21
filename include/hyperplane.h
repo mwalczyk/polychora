@@ -14,7 +14,7 @@ namespace four
 	/// `d` is positive, it is in the half-space determined by the direction of `n`.
 	/// Otherwise, it is in the other half-space.
 	///
-	/// Reference: `https://mathworld.wolfram.com/HessianNormalForm.html`
+	/// Reference: https://mathworld.wolfram.com/HessianNormalForm.html
 	class Hyperplane
 	{
 		
@@ -34,25 +34,14 @@ namespace four
 
 		/// Returns the signed distance (in 4-space) of `point` to the hyperplane.
 		///
-		/// Reference: `https://mathworld.wolfram.com/Point-PlaneDistance.html`
+		/// Reference: https://mathworld.wolfram.com/Point-PlaneDistance.html
 		float signed_distance(const glm::vec4& point) const
 		{
 			return glm::dot(normal, point) + displacement;
 		}
 
-		const glm::vec4& get_normal() const
-		{
-			return normal;
-		}
-
-		float get_displacement() const 
-		{
-			return displacement;
-		}
-
-	//private:
-
 		glm::vec4 normal;
+
 		float displacement;
 
 	};

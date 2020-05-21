@@ -75,14 +75,13 @@ void main()
     const uint max_new_vertices = 6;
     const uint ignore = 6;
 
-    // Grab the appropriate tetrahedron based on this invocations local ID.
+    // Grab the appropriate tetrahedron based on this invocations local ID
     uint local_id = gl_GlobalInvocationID.x;
     uint slice_id = 0;
     vec3 slice_centroid = vec3(0.0);
     Tetrahedron tetra = tetrahedra[local_id];
 
-    // This array will be filled out with up to 4 unique points of intersection
-    // in the for-loop below.
+    // This array will be filled out with up to 4 unique points of intersection in the for-loop below
     vec4 intersections[4] =
     {
         vec4(0.0),
@@ -91,7 +90,7 @@ void main()
         vec4(0.0)
     };
 
-    // Loop through all of this tetrahedron's edges.
+    // Loop through all of this tetrahedron's edges
     for (uint i = 0; i < edge_indices.length(); ++i)
     {
         uvec2 edge = edge_indices[i];
@@ -105,7 +104,7 @@ void main()
 
         if (t >= 0.0 && t <= 1.0)
         {
-            // Calculate and store the point of intersection.
+            // Calculate and store the point of intersection
             vec4 intersection = a + (b - a) * t;
             intersections[slice_id] = intersection;
 
@@ -116,8 +115,8 @@ void main()
     slice_centroid /= float(slice_id);
 
     // The variable `slice_id` is an integer corresponding to the number of valid
-    // intersections that were found. Realistically, this should ONLY ever be
-    // 0, 3, or 4.
+    // intersections that were found: realistically, this should ONLY ever be
+    // 0, 3, or 4
     if (slice_id == 0) // Empty intersection (0-count draw call)
     {
         indirect[local_id] = DrawCommand(0, 0, local_id * max_new_vertices, 0);
@@ -134,7 +133,7 @@ void main()
     else if (slice_id == 4) // Quad
     {
         // We have to use `vec2`s here instead of `uvec2`s because the signed angles
-        // will be floating-point values.
+        // will be floating-point values
         vec2 angles[max_intersections] =
         {
             { 0.0, 0.0 },
@@ -143,7 +142,7 @@ void main()
             { 3.0, 0.0 }
         };
 
-        // Compute the slice normal (in 3-dimensions).
+        // Compute the slice normal (in 3-dimensions)
         vec3 a = intersections[0].xyz;
         vec3 b = intersections[1].xyz;
         vec3 c = intersections[2].xyz;
@@ -172,7 +171,7 @@ void main()
             angles[i].y = signed_angle;
         }
 
-        // Perform an insertion sort.
+        // Perform an insertion sort
         uint i = 1;
         while(i < angles.length())
         {
