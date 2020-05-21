@@ -40,6 +40,10 @@ where φ is the Golden Ratio.
 
 I wrote a C++ header file for enumerating such permutations, together with help from the C++ standard template library and a header file from Eusebeia (for generating _only_ the [even permutations](https://en.wikipedia.org/wiki/Parity_of_a_permutation)). Once the vertices are generated, we can pass them to QHull's convex hull algorithm. Enabling the `Qt` "triangulation" flag results in a list of simplical facets, which can be directly passed into the slicing pipeline.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/mwalczyk/polychora/master/screenshots/row_of_600_cells.gif" alt="screenshot" width="500" height="auto"/>
+</p>
+
 Previously, polychora were generated in a more ad-hoc manner, using a variety of modified "shape files" that I found on the internet (mostly from Paul Bourke's [website](http://paulbourke.net/geometry/hyperspace/)). You can find the corresponding code in an [older, less polished version](https://github.com/mwalczyk/four) of this project, which was also written in Rust. I really wanted to get away from this approach, as I didn't like the idea of storing "hard-coded" shape files in the project. Plus, generating shapes procedurally led to some very interesting challenges. However, the advantage of this "older" approach was that it gave access to all of the connectivity information of each polychoron: vertices, edges, faces, and cells. However, because the resulting facets weren't necessarily tetrahedral, I had to algorithmically "tetrahedralize" each mesh before rendering.
 
 Tetrahedralization in 4-space is similar to triangulation in 3-space. In particular, [any 3D convex polyhedron can be decomposed into tetrahedrons](https://mathoverflow.net/questions/7647/break-polyhedron-into-tetrahedron) by first subdividing its faces into triangles. Next, we pick a vertex from the polyhedron (any vertex will do). We connect all of the other face triangles to the chosen vertex to form a set of tetrahedra (obviously, ignoring faces that contain the chosen vertex). This is not necessarily the "minimal tetrahedral decomposition" of the polyhedron (which is an active area of research for many polytopes), but it always works. An example of this process for a regular, 3D cube can be found [here](https://www.ics.uci.edu/~eppstein/projects/tetra/).
@@ -122,6 +126,7 @@ All of the draw modes listed above will be affected by the 4-dimensional rotatio
 - [ ] Research 4-dimensional knots, un-tying, un-boxing, etc.
 - [ ] Add simple lighting (calculate 3D normals after slicing procedure)
 - [ ] Research Munsell color solids
+- [ ] Research [Coxeter planes](https://en.wikipedia.org/wiki/Coxeter_element#Coxeter_plane)
 
 ## Future Directions
 
@@ -153,6 +158,7 @@ Other resources that I found helpful throughout the creation of this project inc
 - ["Calculate 3D Cross-Section of 4D Shape"](https://stackoverflow.com/questions/50008610/calculate-3d-cross-section-of-4d-shape-tesseract/50016144#50016144)
 - [Four Dimensional Dice Up To Twenty Sides](http://www.polytope.net/hedrondude/dice4.htm)
 - [Normal Vectors in Higher Dimensions](https://ef.gy/linear-algebra:normal-vectors-in-higher-dimensional-spaces)
+- [Equimetric Polyhedra](http://www.numericana.com/answer/polyhedra.htm#equi)
 
 ### License
 [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/)
